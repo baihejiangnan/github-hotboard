@@ -29,6 +29,14 @@ import { queryInputSchema } from "@/lib/types";
 
 const db = prisma;
 
+function logWorkflowStage(
+  workflow: "runRankingWorkflow" | "processVideoJob",
+  stage: string,
+  payload?: Record<string, unknown>
+) {
+  console.info(`[workflow][${workflow}]`, stage, payload ?? {});
+}
+
 function stripUndefined<T extends object>(value: T) {
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).filter(
@@ -234,6 +242,7 @@ export async function executeSavedQueryRun(
 }
 
 export async function runRankingWorkflow(runId: string) {
+  logWorkflowStage("runRankingWorkflow", "start", { runId });
   const run = await db.queryRun.findUnique({
     where: { id: runId }
   });
@@ -253,8 +262,13 @@ export async function runRankingWorkflow(runId: string) {
   });
 
   try {
+    logWorkflowStage("runRankingWorkflow", "load_github_token", {
+      runId,
+      userId: run.userId
+    });
     const token = await getGitHubAccessToken(run.userId);
     const client = new GitHubClient(token);
+    logWorkflowStage("runRankingWorkflow", "collect_candidates", { runId });
     const searchResult = await collectCandidates(client, input);
     const candidates = searchResult.candidates.map((candidate: RankedRepository) => ({
       ...candidate
@@ -265,6 +279,7 @@ export async function runRankingWorkflow(runId: string) {
     );
 
     if (input.rankingMode === "growth") {
+      logWorkflowStage("runRankingWorkflow", "sync_star_events", { runId });
       for (const repo of candidates) {
         const repository = byGitHubId.get(repo.githubId);
         if (!repository) continue;
@@ -295,6 +310,12 @@ export async function runRankingWorkflow(runId: string) {
       where: {
         queryRunId: runId
       }
+    });
+
+    logWorkflowStage("runRankingWorkflow", "persist_results", {
+      runId,
+      resultCount: ranked.length,
+      partial: searchResult.partial
     });
 
     for (const [index, repo] of ranked.entries()) {
@@ -472,6 +493,7 @@ export async function createVideoJob(
 }
 
 export async function processVideoJob(jobId: string) {
+  logWorkflowStage("processVideoJob", "start", { jobId });
   const [{ createSpeechProvider }, { renderVideoJob }] = await Promise.all([
     import("@/lib/video/speech"),
     import("@/lib/video/remotion")
@@ -483,6 +505,14 @@ export async function processVideoJob(jobId: string) {
 
   if (!job) {
     throw new Error(`Video job ${jobId} not found.`);
+  }
+
+  if (job.status === VideoJobStatus.completed && job.videoPath) {
+    logWorkflowStage("processVideoJob", "skip_completed", {
+      jobId,
+      videoPath: job.videoPath
+    });
+    return job.videoPath;
   }
 
   const { videoScriptSchema } = await import("@/lib/types");
@@ -497,26 +527,68 @@ export async function processVideoJob(jobId: string) {
 
   try {
     if (getVideoClipProvider() === "zai") {
-      const { generateSceneClips } = await import("@/lib/video/clip-orchestrator");
-      const clipMap = await generateSceneClips(script.scenes, job.format as VideoFormat);
-      for (const [index, clipPath] of clipMap) {
-        script.scenes[index].clipPath = clipPath;
+      try {
+        logWorkflowStage("processVideoJob", "clip_generation", { jobId });
+        const { generateSceneClips } = await import("@/lib/video/clip-orchestrator");
+        const clipMap = await generateSceneClips(script.scenes, job.format as VideoFormat);
+        for (const [index, clipPath] of clipMap) {
+          script.scenes[index].clipPath = clipPath;
+        }
+      } catch (error) {
+        console.warn("[workflow][processVideoJob][clip_generation_failed]", {
+          jobId,
+          error
+        });
       }
     }
 
-    const provider = createSpeechProvider();
-    const narration = script.narrationSegments
-      .map((segment) => segment.text)
-      .join("\n");
-    const { audioPath } = await provider.synthesize(job.id, narration);
+    const audioPath = await (async () => {
+      try {
+        logWorkflowStage("processVideoJob", "speech_synthesis", { jobId });
+        const provider = createSpeechProvider();
+        const narration = script.narrationSegments
+          .map((segment) => segment.text)
+          .join("\n");
+        const result = await provider.synthesize(job.id, narration);
+        return result.audioPath;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "unknown speech synthesis failure";
+        await db.videoJob.update({
+          where: { id: jobId },
+          data: {
+            status: VideoJobStatus.failed,
+            error: `speech_synthesis_failed: ${message}`
+          }
+        });
+        throw error;
+      }
+    })();
+
     const captions = script.captionSegments;
-    const videoPath = await renderVideoJob(
-      job.id,
-      job.format as VideoFormat,
-      script,
-      audioPath,
-      captions
-    );
+    const videoPath = await (async () => {
+      try {
+        logWorkflowStage("processVideoJob", "video_render", { jobId });
+        return await renderVideoJob(
+          job.id,
+          job.format as VideoFormat,
+          script,
+          audioPath,
+          captions
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "unknown video render failure";
+        await db.videoJob.update({
+          where: { id: jobId },
+          data: {
+            status: VideoJobStatus.failed,
+            error: `video_render_failed: ${message}`
+          }
+        });
+        throw error;
+      }
+    })();
 
     await db.videoJob.update({
       where: { id: jobId },
@@ -528,19 +600,14 @@ export async function processVideoJob(jobId: string) {
       }
     });
 
+    logWorkflowStage("processVideoJob", "complete", {
+      jobId,
+      videoPath
+    });
+
     return videoPath;
   } catch (error) {
     console.error("[workflow][processVideoJob]", { jobId, error });
-    await db.videoJob.update({
-      where: { id: jobId },
-      data: {
-        status: VideoJobStatus.failed,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown video rendering failure."
-      }
-    });
     throw error;
   }
 }

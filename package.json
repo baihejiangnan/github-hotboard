@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "worker": "node --import tsx scripts/worker.ts",
+    "worker": "node --env-file=.env --import tsx scripts/worker.ts",
+    "smoke:local": "node --env-file=.env --import tsx scripts/smoke-local.ts",
     "remotion:studio": "remotion studio remotion/index.ts"
   },
   "dependencies": {

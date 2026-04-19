@@ -1,6 +1,5 @@
 import { registerRoot } from "remotion";
 
-import { RemotionRoot } from "@/remotion/Root";
+import { RemotionRoot } from "./Root";
 
 registerRoot(RemotionRoot);
-

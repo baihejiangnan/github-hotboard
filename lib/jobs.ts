@@ -116,6 +116,11 @@ async function handleScheduledDispatch() {
       const run = await executeSavedQueryRun(query.id, "scheduled");
 
       if (run?.status === "failed") {
+        logWorkerEvent("saved-query.dispatch.retry", {
+          savedQueryId: query.id,
+          runId: run.id,
+          triggerType: run.triggerType
+        });
         await triggerRetryIfNeeded(run.id);
       }
     } catch (error) {
@@ -131,6 +136,11 @@ async function handleScheduledDispatch() {
       });
 
       if (latestRun?.id) {
+        logWorkerEvent("saved-query.dispatch.retry_after_error", {
+          savedQueryId: query.id,
+          runId: latestRun.id,
+          triggerType: latestRun.triggerType
+        });
         await triggerRetryIfNeeded(latestRun.id);
       }
     }

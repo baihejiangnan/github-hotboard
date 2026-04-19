@@ -3,7 +3,7 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 import * as Remotion from "remotion";
 
-import type { CaptionSegment, VideoScript } from "@/lib/types";
+import type { CaptionSegment, VideoScript } from "../lib/types";
 
 const { Video, interpolate, useCurrentFrame, useVideoConfig } = Remotion;
 const AudioTrack = (

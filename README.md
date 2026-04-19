@@ -49,6 +49,12 @@ npm run worker
 npm run verify
 ```
 
+7. 做一次本地全链路 smoke：
+
+```bash
+npm run smoke:local
+```
+
 ## Windows 一键脚本
 - `setup-local.cmd`：复制 `.env`、安装依赖、生成 Prisma Client、执行数据库迁移
 - `run-web.cmd`：启动 Web 开发服务器
@@ -65,6 +71,7 @@ npm run verify
 - `NEXTAUTH_URL` / `NEXTAUTH_SECRET`
 - `GITHUB_ID` / `GITHUB_SECRET`：GitHub OAuth App
 - `OPENAI_API_KEY`：启用语音配音
+- `ZAI_API_KEY`：启用智谱文案/视频/TTS 能力
 - `EXPORT_ROOT`：本地导出目录
 - `VIDEO_INLINE_RENDER`：设为 `true` 时，在 API 请求里同步渲染视频
 
@@ -74,3 +81,5 @@ npm run verify
 - 发布能力当前是导出发布包，不直接调用公众号/小红书平台接口
 - 视频系统需要额外安装 Remotion 运行依赖，并确保本机具备可用的 Chromium / ffmpeg 环境
 - 调整主链路后，建议至少执行一次 `npm run verify`，把单元测试和生产构建一起跑完
+- `npm run smoke:local` 会真实调用 GitHub、文案模型、视频片段、TTS 与 Remotion 渲染；运行前需要本地已经存在一个完成 GitHub 登录的用户
+- 如果 `OPENAI_API_KEY` 和 `ZAI_API_KEY` 都存在，`smoke:local` 会按优先顺序尝试可用的 TTS provider；如果外部配额不足，会直接在终端输出对应阶段错误

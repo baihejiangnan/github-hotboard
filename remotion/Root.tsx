@@ -1,6 +1,6 @@
 import { Composition } from "remotion";
 
-import { HotRepoVideo } from "@/remotion/HotRepoVideo";
+import { HotRepoVideo } from "./HotRepoVideo";
 
 export function RemotionRoot() {
   return (
@@ -46,4 +46,3 @@ export function RemotionRoot() {
     </>
   );
 }
-
