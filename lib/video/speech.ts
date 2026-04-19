@@ -18,8 +18,7 @@ export class OpenAITtsProvider implements SpeechProvider {
     const result = await this.client.audio.speech.create({
       model: getTtsModel(),
       voice: "alloy",
-      input: text,
-      format: "mp3"
+      input: text
     });
 
     const buffer = Buffer.from(await result.arrayBuffer());
@@ -36,4 +35,3 @@ export function createSpeechProvider() {
 
   return new OpenAITtsProvider(process.env.OPENAI_API_KEY);
 }
-
