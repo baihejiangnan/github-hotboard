@@ -1,3 +1,5 @@
+"use client";
+
 import type { CSSProperties, ReactNode } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Audio } from "@remotion/media";
