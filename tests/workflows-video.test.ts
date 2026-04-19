@@ -66,7 +66,7 @@ describe("processVideoJob", () => {
     expect(mocks.prisma.videoJob.update).not.toHaveBeenCalled();
   });
 
-  it("stores a speech_synthesis_failed error when speech generation fails", async () => {
+  it("falls back to a silent video when speech generation fails", async () => {
     mocks.prisma.videoJob.findUnique.mockResolvedValue({
       id: "job-2",
       format: "vertical_60",
@@ -83,15 +83,26 @@ describe("processVideoJob", () => {
     mocks.createSpeechProvider.mockReturnValue({
       synthesize: vi.fn().mockRejectedValue(new Error("tts broke"))
     });
+    mocks.renderVideoJob.mockResolvedValue("D:/exports/video/job-2.mp4");
 
     const { processVideoJob } = await import("@/lib/workflows");
+    const result = await processVideoJob("job-2");
 
-    await expect(processVideoJob("job-2")).rejects.toThrow("tts broke");
+    expect(result).toBe("D:/exports/video/job-2.mp4");
+    expect(mocks.renderVideoJob).toHaveBeenCalledWith(
+      "job-2",
+      "vertical_60",
+      expect.any(Object),
+      null,
+      expect.any(Array)
+    );
     expect(mocks.prisma.videoJob.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status: "failed",
-          error: "speech_synthesis_failed: tts broke"
+          status: "completed",
+          audioPath: null,
+          videoPath: "D:/exports/video/job-2.mp4",
+          error: "speech_synthesis_failed: tts broke | rendered_without_audio"
         })
       })
     );

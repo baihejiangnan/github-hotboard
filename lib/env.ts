@@ -45,11 +45,11 @@ export function getArkBaseUrl() {
 }
 
 export function getTextProvider(): "openai" | "zai" | "ark" {
-  return (process.env.AI_TEXT_PROVIDER as "openai" | "zai" | "ark") || "zai";
+  return (process.env.AI_TEXT_PROVIDER as "openai" | "zai" | "ark") || "ark";
 }
 
-export function getTtsProvider(): "openai" | "zai" {
-  return (process.env.AI_TTS_PROVIDER as "openai" | "zai") || "zai";
+export function getTtsProvider(): "openai" | "zai" | "none" {
+  return (process.env.AI_TTS_PROVIDER as "openai" | "zai" | "none") || "none";
 }
 
 export function getVideoClipProvider(): "zai" | "none" {

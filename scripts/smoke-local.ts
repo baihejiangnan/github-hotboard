@@ -17,7 +17,7 @@ type Stage =
   | "create_video_job"
   | "process_video_job";
 
-type TtsProviderName = "openai" | "zai";
+type TtsProviderName = "openai" | "zai" | "none";
 
 function fail(stage: Stage, message: string): never {
   throw new Error(`${stage}: ${message}`);
@@ -52,7 +52,10 @@ function buildTtsProviderCandidates(): TtsProviderName[] {
   const explicitProviders = process.env.SMOKE_TTS_PROVIDER
     ?.split(",")
     .map((provider) => provider.trim().toLowerCase())
-    .filter((provider): provider is TtsProviderName => provider === "openai" || provider === "zai");
+    .filter(
+      (provider): provider is TtsProviderName =>
+        provider === "openai" || provider === "zai" || provider === "none"
+    );
 
   if (explicitProviders && explicitProviders.length > 0) {
     return [...new Set(explicitProviders)];
@@ -60,11 +63,19 @@ function buildTtsProviderCandidates(): TtsProviderName[] {
 
   const preferredProviders = [
     process.env.AI_TTS_PROVIDER?.toLowerCase(),
+    "none",
     "openai",
     "zai"
-  ].filter((provider): provider is TtsProviderName => provider === "openai" || provider === "zai");
+  ].filter(
+    (provider): provider is TtsProviderName =>
+      provider === "openai" || provider === "zai" || provider === "none"
+  );
 
   return [...new Set(preferredProviders)].filter((provider) => {
+    if (provider === "none") {
+      return true;
+    }
+
     if (provider === "openai") {
       return Boolean(process.env.OPENAI_API_KEY);
     }
@@ -142,7 +153,10 @@ async function main() {
   const providerCandidates = buildTtsProviderCandidates();
 
   if (providerCandidates.length < 1) {
-    fail("process_video_job", "没有可用的 TTS provider，请配置 OPENAI_API_KEY 或 ZAI_API_KEY。");
+    fail(
+      "process_video_job",
+      "没有可用的 TTS provider，请配置 OPENAI_API_KEY、ZAI_API_KEY，或将 AI_TTS_PROVIDER 设为 none。"
+    );
   }
 
   let videoPath = "";

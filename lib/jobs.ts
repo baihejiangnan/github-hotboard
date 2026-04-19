@@ -1,5 +1,6 @@
 import PgBoss from "pg-boss";
 
+import { isQuotaOrBalanceError } from "@/lib/ai/errors";
 import { prisma } from "@/lib/prisma";
 import {
   createShareDraftFromRun,
@@ -187,9 +188,7 @@ export async function registerWorkers() {
       return;
     }
 
-    logWorkerEvent("video.render.start", { jobId: data.jobId });
-    await processVideoJob(data.jobId);
-    logWorkerEvent("video.render.complete", { jobId: data.jobId });
+    await handleVideoRenderJob(data.jobId);
   });
 
   await boss.work("daily-digest.tick", async () => {
@@ -197,4 +196,22 @@ export async function registerWorkers() {
     await sendTodayDigest();
     logWorkerEvent("daily-digest.tick.complete");
   });
+}
+
+export async function handleVideoRenderJob(jobId: string) {
+  try {
+    logWorkerEvent("video.render.start", { jobId });
+    await processVideoJob(jobId);
+    logWorkerEvent("video.render.complete", { jobId });
+  } catch (error) {
+    if (isQuotaOrBalanceError(error)) {
+      logWorkerEvent("video.render.non_retryable_failure", {
+        jobId,
+        reason: error instanceof Error ? error.message : String(error)
+      });
+      return;
+    }
+
+    throw error;
+  }
 }

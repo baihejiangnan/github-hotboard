@@ -1,6 +1,12 @@
 import OpenAI from "openai";
 
-import { getTtsModel, getTtsProvider, getZaiApiKey, getZaiBaseUrl, getZaiTtsVoice } from "@/lib/env";
+import {
+  getTtsModel,
+  getTtsProvider,
+  getZaiApiKey,
+  getZaiBaseUrl,
+  getZaiTtsVoice
+} from "@/lib/env";
 import { writeTextArtifact } from "@/lib/storage";
 
 export interface SpeechProvider {
@@ -49,7 +55,11 @@ export class ZaiTtsProvider implements SpeechProvider {
   }
 }
 
-export function createSpeechProvider(): SpeechProvider {
+export function createSpeechProvider(): SpeechProvider | null {
+  if (getTtsProvider() === "none") {
+    return null;
+  }
+
   if (getTtsProvider() === "zai") {
     return new ZaiTtsProvider(getZaiApiKey(), getZaiBaseUrl());
   }

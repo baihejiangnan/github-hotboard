@@ -23,7 +23,7 @@ async function copyAssetForRemotion(
 async function prepareRenderAssets(
   jobId: string,
   script: VideoScript,
-  audioPath: string
+  audioPath: string | null
 ) {
   const publicAssetDir = path.resolve(process.cwd(), "public", "generated-assets", jobId);
   const routePrefix = `/generated-assets/${jobId}`;
@@ -54,13 +54,14 @@ async function prepareRenderAssets(
     )
   };
 
-  const audioExtension = path.extname(audioPath) || ".mp3";
-  const preparedAudioSrc = await copyAssetForRemotion(
-    publicAssetDir,
-    routePrefix,
-    audioPath,
-    `audio${audioExtension}`
-  );
+  const preparedAudioSrc = audioPath
+    ? await copyAssetForRemotion(
+        publicAssetDir,
+        routePrefix,
+        audioPath,
+        `audio${path.extname(audioPath) || ".mp3"}`
+      )
+    : null;
 
   return {
     preparedScript,
@@ -73,7 +74,7 @@ export async function renderVideoJob(
   jobId: string,
   format: VideoFormat,
   script: VideoScript,
-  audioPath: string,
+  audioPath: string | null,
   captions: CaptionSegment[]
 ) {
   const [{ bundle }, { renderMedia, selectComposition }] = await Promise.all([
@@ -92,7 +93,7 @@ export async function renderVideoJob(
       id: compositionId,
       inputProps: {
         script: preparedScript,
-        audioSrc: preparedAudioSrc,
+        audioSrc: preparedAudioSrc ?? "",
         captions
       }
     });
@@ -106,7 +107,7 @@ export async function renderVideoJob(
       outputLocation,
       inputProps: {
         script: preparedScript,
-        audioSrc: preparedAudioSrc,
+        audioSrc: preparedAudioSrc ?? "",
         captions
       }
     });

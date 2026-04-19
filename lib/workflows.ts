@@ -1,6 +1,7 @@
 import { Prisma, QueryRunStatus, VideoJobStatus } from "@prisma/client";
 import { max } from "date-fns";
 
+import { isQuotaOrBalanceError } from "@/lib/ai/errors";
 import { getGitHubAccessToken } from "@/lib/auth";
 import { getVideoClipProvider } from "@/lib/env";
 import { sendDailyDigestForDate } from "@/lib/digests";
@@ -525,6 +526,8 @@ export async function processVideoJob(jobId: string) {
     }
   });
 
+  let fallbackWarning: string | null = null;
+
   try {
     if (getVideoClipProvider() === "zai") {
       try {
@@ -543,9 +546,15 @@ export async function processVideoJob(jobId: string) {
     }
 
     const audioPath = await (async () => {
+      const provider = createSpeechProvider();
+
+      if (!provider) {
+        fallbackWarning = "speech_synthesis_skipped: no_tts_provider_configured | rendered_without_audio";
+        return null;
+      }
+
       try {
         logWorkflowStage("processVideoJob", "speech_synthesis", { jobId });
-        const provider = createSpeechProvider();
         const narration = script.narrationSegments
           .map((segment) => segment.text)
           .join("\n");
@@ -554,14 +563,13 @@ export async function processVideoJob(jobId: string) {
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "unknown speech synthesis failure";
-        await db.videoJob.update({
-          where: { id: jobId },
-          data: {
-            status: VideoJobStatus.failed,
-            error: `speech_synthesis_failed: ${message}`
-          }
+        fallbackWarning = `speech_synthesis_failed: ${message} | rendered_without_audio`;
+        console.warn("[workflow][processVideoJob][speech_synthesis_failed]", {
+          jobId,
+          error,
+          nonRetryable: isQuotaOrBalanceError(error)
         });
-        throw error;
+        return null;
       }
     })();
 
@@ -596,7 +604,8 @@ export async function processVideoJob(jobId: string) {
         status: VideoJobStatus.completed,
         audioPath,
         captionJson: serializeCaptionSegments(captions),
-        videoPath
+        videoPath,
+        error: fallbackWarning
       }
     });
 

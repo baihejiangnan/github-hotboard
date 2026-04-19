@@ -1,3 +1,4 @@
+import OpenAI from "openai";
 import { z } from "zod";
 
 import {
@@ -97,23 +98,12 @@ async function createArkResponse(payload: {
   model: string;
   input: ArkInputMessage[];
 }) {
-  const response = await fetch(`${getArkBaseUrl()}/responses`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getArkApiKey()}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
+  const client = new OpenAI({
+    baseURL: getArkBaseUrl(),
+    apiKey: getArkApiKey()
   });
 
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `Ark responses failed: ${response.status}${detail ? ` ${detail}` : ""}`
-    );
-  }
-
-  return response.json();
+  return client.responses.create(payload as Parameters<typeof client.responses.create>[0]);
 }
 
 export async function generateArkText(
