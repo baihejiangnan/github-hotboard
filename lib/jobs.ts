@@ -73,10 +73,10 @@ export async function syncSavedQuerySchedules() {
   await ensureQueues(boss);
 
   // 全局订阅调度器：每分钟检查一次到点订阅，避免为每个订阅注册独立 queue。
-  await boss.schedule("saved-query.dispatch", "* * * * *", null);
+  await boss.schedule("saved-query.dispatch", "* * * * *", undefined);
 
   // 每日晚间发送“我的订阅日报”，使用本地时区语义。
-  await boss.schedule("daily-digest.tick", "0 20 * * *", null, {
+  await boss.schedule("daily-digest.tick", "0 20 * * *", undefined, {
     tz: "Asia/Shanghai"
   });
 }
