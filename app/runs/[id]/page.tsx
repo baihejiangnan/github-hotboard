@@ -1,8 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
 
 import { AppShell } from "@/components/app-shell";
 import { RunDetailLive } from "@/components/run-detail-live";
 import { StatusPill } from "@/components/status-pill";
+import { authOptions } from "@/lib/auth";
 import { getRankingModeLabel, getRunStatusLabel } from "@/lib/display";
 import { prisma } from "@/lib/prisma";
 
@@ -11,9 +13,19 @@ export default async function RunDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    redirect("/explore");
+  }
+
   const { id } = await params;
-  const run = await prisma.queryRun.findUnique({
-    where: { id },
+  const run = await prisma.queryRun.findFirst({
+    where: {
+      id,
+      userId
+    },
     include: {
       results: {
         orderBy: {
@@ -104,4 +116,3 @@ export default async function RunDetailPage({
     </AppShell>
   );
 }
-

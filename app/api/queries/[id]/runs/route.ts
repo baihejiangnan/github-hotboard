@@ -1,7 +1,23 @@
+import { QueryRunStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+function parseStatus(value: string | null) {
+  switch (value) {
+    case "pending":
+      return QueryRunStatus.pending;
+    case "running":
+      return QueryRunStatus.running;
+    case "completed":
+      return QueryRunStatus.completed;
+    case "failed":
+      return QueryRunStatus.failed;
+    default:
+      return undefined;
+  }
+}
 
 export async function GET(
   request: Request,
@@ -11,9 +27,8 @@ export async function GET(
     const user = await requireUser();
     const { id } = await params;
     const url = new URL(request.url);
-    const status = url.searchParams.get("status");
-    const db = prisma as any;
-    const query = await db.savedQuery.findFirst({
+    const status = parseStatus(url.searchParams.get("status"));
+    const query = await prisma.savedQuery.findFirst({
       where: {
         id,
         userId: user.id
@@ -30,7 +45,7 @@ export async function GET(
       );
     }
 
-    const runs = await db.queryRun.findMany({
+    const runs = await prisma.queryRun.findMany({
       where: {
         userId: user.id,
         savedQueryId: id,

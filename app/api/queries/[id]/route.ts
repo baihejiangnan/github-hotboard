@@ -3,12 +3,10 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { syncSavedQuerySchedules } from "@/lib/jobs";
 import { prisma } from "@/lib/prisma";
-import { getNextRunAtForCron } from "@/lib/schedule";
-
-function normalizeString(value: unknown) {
-  const nextValue = typeof value === "string" ? value.trim() : "";
-  return nextValue || null;
-}
+import {
+  buildSavedQueryUpdateData,
+  savedQueryUpdateSchema
+} from "@/lib/saved-queries";
 
 export async function PATCH(
   request: Request,
@@ -17,9 +15,8 @@ export async function PATCH(
   try {
     const user = await requireUser();
     const { id } = await params;
-    const body = (await request.json()) as Record<string, unknown>;
-    const db = prisma as any;
-    const current = await db.savedQuery.findFirst({
+    const input = savedQueryUpdateSchema.parse(await request.json());
+    const current = await prisma.savedQuery.findFirst({
       where: {
         id,
         userId: user.id
@@ -36,21 +33,11 @@ export async function PATCH(
       );
     }
 
-    const nextScheduleCron =
-      Object.prototype.hasOwnProperty.call(body, "scheduleCron") ? normalizeString(body.scheduleCron) : current.scheduleCron;
-    const nextIsActive =
-      typeof body.isActive === "boolean" ? body.isActive : nextScheduleCron ? current.isActive : false;
-
-    const query = await db.savedQuery.update({
+    const query = await prisma.savedQuery.update({
       where: {
         id: current.id
       },
-      data: {
-        title: Object.prototype.hasOwnProperty.call(body, "title") ? normalizeString(body.title) ?? current.title : current.title,
-        scheduleCron: nextScheduleCron,
-        isActive: nextIsActive,
-        nextRunAt: nextScheduleCron && nextIsActive ? getNextRunAtForCron(nextScheduleCron) : null
-      }
+      data: buildSavedQueryUpdateData(current, input)
     });
 
     await syncSavedQuerySchedules();
@@ -77,8 +64,7 @@ export async function DELETE(
   try {
     const user = await requireUser();
     const { id } = await params;
-    const db = prisma as any;
-    const current = await db.savedQuery.findFirst({
+    const current = await prisma.savedQuery.findFirst({
       where: {
         id,
         userId: user.id
@@ -95,7 +81,7 @@ export async function DELETE(
       );
     }
 
-    await db.savedQuery.delete({
+    await prisma.savedQuery.delete({
       where: {
         id: current.id
       }

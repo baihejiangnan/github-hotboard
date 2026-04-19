@@ -1,10 +1,23 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
-import { useCurrentFrame, useVideoConfig } from "remotion";
-import { Audio } from "@remotion/media";
+import type { CSSProperties, ComponentType, ReactNode } from "react";
+import * as Remotion from "remotion";
 
 import type { CaptionSegment, VideoScript } from "@/lib/types";
+
+const { Video, interpolate, useCurrentFrame, useVideoConfig } = Remotion;
+const AudioTrack = (
+  Remotion as unknown as {
+    Audio?: ComponentType<{ src: string }>;
+    Html5Audio?: ComponentType<{ src: string }>;
+  }
+).Audio ??
+  (
+    Remotion as unknown as {
+      Audio?: ComponentType<{ src: string }>;
+      Html5Audio?: ComponentType<{ src: string }>;
+    }
+  ).Html5Audio;
 
 function AbsoluteFill(props: { children?: ReactNode; style?: CSSProperties }) {
   return (
@@ -20,26 +33,11 @@ function AbsoluteFill(props: { children?: ReactNode; style?: CSSProperties }) {
   );
 }
 
-function interpolate(
-  value: number,
-  inputRange: [number, number],
-  outputRange: [number, number]
-) {
-  const [inputStart, inputEnd] = inputRange;
-  const [outputStart, outputEnd] = outputRange;
-
-  if (inputEnd === inputStart) {
-    return outputStart;
-  }
-
-  const progress = Math.min(1, Math.max(0, (value - inputStart) / (inputEnd - inputStart)));
-  return outputStart + progress * (outputEnd - outputStart);
-}
-
 function findCurrentCaption(captions: CaptionSegment[], currentMs: number) {
   return (
-    captions.find((caption) => currentMs >= caption.startMs && currentMs < caption.endMs) ??
-    captions[captions.length - 1]
+    captions.find(
+      (caption) => currentMs >= caption.startMs && currentMs < caption.endMs
+    ) ?? captions[captions.length - 1]
   );
 }
 
@@ -55,26 +53,43 @@ export function HotRepoVideo({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const currentMs = (frame / fps) * 1000;
-  const index = Math.min(
-    Math.floor((frame / (script.format === "vertical_60" ? 270 : 360)) % Math.max(script.scenes.length, 1)),
-    Math.max(script.scenes.length - 1, 0)
-  );
-  const scene = script.scenes[index];
+  const sceneDuration = script.format === "vertical_60" ? 270 : 360;
+  const sceneIndex = Math.floor(frame / sceneDuration);
+  const scene =
+    script.scenes[
+      Math.min(sceneIndex, Math.max(script.scenes.length - 1, 0))
+    ];
   const caption = findCurrentCaption(captions, currentMs);
-  const opacity = interpolate(frame % (script.format === "vertical_60" ? 270 : 360), [0, 20, 220, 260], [0, 1, 1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp"
-  });
+  const opacity = interpolate(
+    frame % sceneDuration,
+    [0, 20, sceneDuration - 50, sceneDuration - 10],
+    [0, 1, 1, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp"
+    }
+  );
 
   return (
     <AbsoluteFill
       style={{
-        background: "linear-gradient(145deg, #151413 0%, #20170f 35%, #0f1d37 100%)",
+        background:
+          "linear-gradient(145deg, #151413 0%, #20170f 35%, #0f1d37 100%)",
         color: "white",
         padding: script.format === "vertical_60" ? 84 : 72
       }}
     >
-      {audioSrc ? <Audio src={audioSrc} /> : null}
+      {scene?.clipPath ? (
+        <AbsoluteFill style={{ opacity: 0.35 }}>
+          <Video
+            src={scene.clipPath}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            volume={0}
+          />
+        </AbsoluteFill>
+      ) : null}
+
+      {audioSrc && AudioTrack ? <AudioTrack src={audioSrc} /> : null}
 
       <div
         style={{
@@ -99,7 +114,13 @@ export function HotRepoVideo({
               background: scene?.accent ?? "#ff6b35"
             }}
           />
-          <div style={{ fontSize: script.format === "vertical_60" ? 88 : 74, fontWeight: 800, lineHeight: 1.02 }}>
+          <div
+            style={{
+              fontSize: script.format === "vertical_60" ? 88 : 74,
+              fontWeight: 800,
+              lineHeight: 1.02
+            }}
+          >
             {scene?.title || "GitHub 热榜"}
           </div>
           <div
@@ -132,7 +153,9 @@ export function HotRepoVideo({
           >
             {caption?.text || script.cta}
           </div>
-          <div style={{ fontSize: 26, color: "rgba(255,255,255,0.72)" }}>{script.cta}</div>
+          <div style={{ fontSize: 26, color: "rgba(255,255,255,0.72)" }}>
+            {script.cta}
+          </div>
         </div>
       </div>
     </AbsoluteFill>

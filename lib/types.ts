@@ -76,6 +76,7 @@ export interface VideoScene {
   body: string;
   accent: string;
   repoName?: string;
+  clipPath?: string;
 }
 
 export interface VideoScript {
@@ -119,6 +120,34 @@ export const videoJobRequestSchema = z.object({
   format: z.union([z.literal("vertical_60"), z.literal("horizontal_90")])
 });
 
+export const narrationSegmentSchema = z.object({
+  startMs: z.number().int().min(0),
+  endMs: z.number().int().min(0),
+  text: z.string().trim().min(1)
+});
+
+export const captionSegmentSchema = z.object({
+  startMs: z.number().int().min(0),
+  endMs: z.number().int().min(0),
+  text: z.string().trim().min(1)
+});
+
+export const videoSceneSchema = z.object({
+  title: z.string().trim().min(1),
+  body: z.string().trim().min(1),
+  accent: z.string().trim().min(1),
+  repoName: z.string().trim().min(1).optional(),
+  clipPath: z.string().trim().min(1).optional()
+});
+
+export const videoScriptSchema = z.object({
+  format: z.union([z.literal("vertical_60"), z.literal("horizontal_90")]),
+  scenes: z.array(videoSceneSchema).min(1),
+  narrationSegments: z.array(narrationSegmentSchema).min(1),
+  captionSegments: z.array(captionSegmentSchema).min(1),
+  cta: z.string().trim().min(1)
+});
+
 export const savedQueryRequestSchema = queryInputSchema.extend({
   title: z.string().trim().min(2).max(80),
   scheduleCron: z.string().trim().min(5).max(100).optional(),
@@ -127,4 +156,3 @@ export const savedQueryRequestSchema = queryInputSchema.extend({
     "xiaohongshu_post"
   ])
 });
-

@@ -5,35 +5,8 @@ import styles from "@/app/queries/queries.module.css";
 import { DashboardPage } from "@/components/dashboard-page";
 import { ShareDraftBrowser } from "@/components/share-draft-browser";
 import { authOptions } from "@/lib/auth";
-import { formatDateTime, getShareChannelLabel } from "@/lib/display";
 import { prisma } from "@/lib/prisma";
-
-function extractString(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function extractStringArray(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((item) => (typeof item === "string" ? item.trim() : ""))
-    .filter(Boolean);
-}
-
-function readPayload(payload: unknown) {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return {};
-  }
-
-  return payload as Record<string, unknown>;
-}
-
-function extractPreviewText(body?: string | null) {
-  const safeBody = typeof body === "string" ? body : "";
-  return safeBody.replace(/[#>*`[\]]/g, "").replace(/\s+/g, " ").trim().slice(0, 280) || "这份草稿还没有正文。";
-}
+import { normalizeShareDraft } from "@/lib/share-drafts";
 
 export default async function SharePage() {
   const session = await getServerSession(authOptions);
@@ -43,46 +16,29 @@ export default async function SharePage() {
     redirect("/explore");
   }
 
-  const db = prisma as any;
-  const drafts = await db.shareDraft.findMany({
+  const drafts = await prisma.shareDraft.findMany({
     where: {
       userId
-    },
-    include: {
-      queryRun: {
-        select: {
-          id: true
-        }
-      }
     },
     orderBy: {
       updatedAt: "desc"
     }
   });
 
-  const normalizedDrafts = drafts.map((draft: any) => {
-    const payload = readPayload(draft.payload);
-    const titleOptions = extractStringArray(
-      draft.titleOptions ?? payload.titleOptions ?? payload.title_options
-    );
-    const body = extractString(draft.body ?? payload.body ?? payload.content);
-    const coverText = extractString(
-      draft.coverText ?? payload.coverText ?? payload.cover_text ?? payload.summary
-    );
-    const hashtags = extractStringArray(
-      draft.hashtags ?? payload.hashtags ?? payload.tags
-    );
+  const normalizedDrafts = drafts.map((draft) => {
+    const normalized = normalizeShareDraft(draft);
 
     return {
-      id: draft.id,
-      channelLabel: getShareChannelLabel(draft.channel),
-      updatedAtLabel: formatDateTime(draft.updatedAt),
-      title: titleOptions[0] || extractString(payload.title) || "未命名草稿",
-      coverText: coverText || "还没有封面文案",
-      body: body || "这份草稿还没有正文。",
-      hashtags,
-      wordCount: body.length,
-      lineCount: body ? body.split(/\r?\n/).length : 1
+      id: normalized.id,
+      channel: normalized.channel,
+      title: normalized.title,
+      coverText: normalized.coverText,
+      body: normalized.body,
+      tags: normalized.hashtags,
+      updatedAt: normalized.updatedAt,
+      queryRunId: normalized.queryRunId,
+      wordCount: normalized.body.length,
+      lineCount: normalized.body ? normalized.body.split(/\r?\n/).length : 1
     };
   });
 

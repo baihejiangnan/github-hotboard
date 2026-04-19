@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-import { getTtsModel } from "@/lib/env";
+import { getTtsModel, getTtsProvider, getZaiApiKey, getZaiBaseUrl, getZaiTtsVoice } from "@/lib/env";
 import { writeTextArtifact } from "@/lib/storage";
 
 export interface SpeechProvider {
@@ -28,7 +28,32 @@ export class OpenAITtsProvider implements SpeechProvider {
   }
 }
 
-export function createSpeechProvider() {
+export class ZaiTtsProvider implements SpeechProvider {
+  private readonly client: OpenAI;
+
+  constructor(apiKey: string, baseUrl: string) {
+    this.client = new OpenAI({ apiKey, baseURL: baseUrl });
+  }
+
+  async synthesize(jobId: string, text: string) {
+    const result = await this.client.audio.speech.create({
+      model: "glm-tts",
+      voice: getZaiTtsVoice() as "alloy",
+      input: text
+    });
+
+    const buffer = Buffer.from(await result.arrayBuffer());
+    const audioPath = await writeTextArtifact("audio", `${jobId}.mp3`, buffer);
+
+    return { audioPath };
+  }
+}
+
+export function createSpeechProvider(): SpeechProvider {
+  if (getTtsProvider() === "zai") {
+    return new ZaiTtsProvider(getZaiApiKey(), getZaiBaseUrl());
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is required to generate voice-over audio.");
   }

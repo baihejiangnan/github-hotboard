@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildShareDraft } from "@/lib/share/generator";
+import {
+  buildShareDraft,
+  parseShareDraftModelOutput
+} from "@/lib/share/generator";
 import type { RankedRepository } from "@/lib/types";
 
 const repo = (fullName: string): RankedRepository => ({
@@ -24,8 +27,8 @@ const repo = (fullName: string): RankedRepository => ({
 });
 
 describe("buildShareDraft", () => {
-  it("creates a wechat payload with repo links", () => {
-    const payload = buildShareDraft(
+  it("creates a wechat payload with repo links", async () => {
+    const payload = await buildShareDraft(
       "wechat_article",
       "run-1",
       {
@@ -43,5 +46,41 @@ describe("buildShareDraft", () => {
     expect(payload.body).toContain("https://github.com/team/repo-a");
     expect(payload.titleOptions[0]).toContain("最近7天");
   });
-});
 
+  it("normalizes a valid AI share payload through schema parsing", () => {
+    const payload = parseShareDraftModelOutput(
+      JSON.stringify({
+        titleOptions: ["主标题", "副标题"],
+        body: "正文内容",
+        coverText: "封面文案",
+        hashtags: ["GitHub热榜", "开源项目"]
+      }),
+      "wechat_article",
+      "run-1"
+    );
+
+    expect(payload).toEqual({
+      channel: "wechat_article",
+      sourceRunId: "run-1",
+      titleOptions: ["主标题", "副标题"],
+      body: "正文内容",
+      coverText: "封面文案",
+      hashtags: ["GitHub热榜", "开源项目"]
+    });
+  });
+
+  it("rejects malformed AI share payloads", () => {
+    expect(() =>
+      parseShareDraftModelOutput(
+        JSON.stringify({
+          titleOptions: [],
+          body: "正文内容",
+          coverText: "封面文案",
+          hashtags: ["GitHub热榜"]
+        }),
+        "wechat_article",
+        "run-1"
+      )
+    ).toThrow();
+  });
+});

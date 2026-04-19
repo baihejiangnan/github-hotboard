@@ -1,19 +1,53 @@
-import { QueryRunStatus, VideoJobStatus } from "@prisma/client";
+import { Prisma, QueryRunStatus, VideoJobStatus } from "@prisma/client";
 import { max } from "date-fns";
 
 import { getGitHubAccessToken } from "@/lib/auth";
+import { getVideoClipProvider } from "@/lib/env";
 import { sendDailyDigestForDate } from "@/lib/digests";
 import { GitHubClient } from "@/lib/github/client";
 import { collectCandidates } from "@/lib/github/search";
 import { prisma } from "@/lib/prisma";
 import { rankGrowth, rankNewHot } from "@/lib/ranking";
-import { buildScheduleCron, getNextRunAtForCron } from "@/lib/schedule";
+import { buildQueryInputFromSavedQuery } from "@/lib/saved-queries";
+import { getNextRunAtForCron } from "@/lib/schedule";
 import { buildShareDraft } from "@/lib/share/generator";
+import {
+  serializeShareDraftPayload,
+  shareDraftPayloadSchema
+} from "@/lib/share-drafts";
 import { writeTextArtifact } from "@/lib/storage";
-import type { QueryInput, RankedRepository, ShareChannel, VideoFormat, VideoScript } from "@/lib/types";
+import type {
+  CaptionSegment,
+  QueryInput,
+  RankedRepository,
+  RateLimitSnapshot,
+  ShareChannel,
+  VideoFormat,
+  VideoScript
+} from "@/lib/types";
 import { queryInputSchema } from "@/lib/types";
 
-const db = prisma as any;
+const db = prisma;
+
+function stripUndefined<T extends object>(value: T) {
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(
+      ([, entry]) => entry !== undefined
+    )
+  );
+}
+
+function serializeQuotaSnapshot(quotaSnapshot: RateLimitSnapshot[]): Prisma.InputJsonValue {
+  return quotaSnapshot.map((snapshot) => stripUndefined(snapshot)) as Prisma.InputJsonValue;
+}
+
+function serializeCaptionSegments(captions: CaptionSegment[]): Prisma.InputJsonValue {
+  return captions.map((segment) => ({
+    startMs: segment.startMs,
+    endMs: segment.endMs,
+    text: segment.text
+  })) as Prisma.InputJsonValue;
+}
 
 async function upsertRepositories(candidates: RankedRepository[]) {
   const records = [];
@@ -64,7 +98,12 @@ async function upsertRepositories(candidates: RankedRepository[]) {
   return records;
 }
 
-async function syncStarEvents(client: GitHubClient, repositoryId: string, repo: RankedRepository, windowDays: number) {
+async function syncStarEvents(
+  client: GitHubClient,
+  repositoryId: string,
+  repo: RankedRepository,
+  windowDays: number
+) {
   const latestKnown = await db.repoStarEvent.findFirst({
     where: { repositoryId },
     orderBy: {
@@ -75,7 +114,10 @@ async function syncStarEvents(client: GitHubClient, repositoryId: string, repo: 
     }
   });
 
-  const windowStart = max([new Date(0), new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)]);
+  const windowStart = max([
+    new Date(0),
+    new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000)
+  ]);
   let cursor: string | null | undefined = null;
   let hasNextPage = true;
   const collected: Date[] = [];
@@ -137,21 +179,10 @@ function serializeMetric(repo: RankedRepository) {
   };
 }
 
-function buildSavedQueryInput(savedQuery: any): QueryInput {
-  return queryInputSchema.parse({
-    rankingMode: savedQuery.rankingMode,
-    windowDays: savedQuery.windowDays,
-    keyword: savedQuery.keyword ?? undefined,
-    language: savedQuery.language ?? undefined,
-    topic: savedQuery.topic ?? undefined,
-    limit: savedQuery.limit,
-    keywordMode: "broad",
-    excludeForks: true,
-    excludeArchived: true
-  });
-}
-
-async function updateSavedQuerySummary(savedQueryId: string, values: Record<string, unknown>) {
+async function updateSavedQuerySummary(
+  savedQueryId: string,
+  values: Prisma.SavedQueryUncheckedUpdateInput
+) {
   await db.savedQuery.update({
     where: { id: savedQueryId },
     data: values
@@ -172,7 +203,7 @@ export async function createQueryRunFromSavedQuery(
     throw new Error("订阅不存在。");
   }
 
-  const input = buildSavedQueryInput(savedQuery);
+  const input = buildQueryInputFromSavedQuery(savedQuery);
 
   return db.queryRun.create({
     data: {
@@ -192,7 +223,12 @@ export async function executeSavedQueryRun(
   retryOfRunId?: string,
   attemptNumber = 1
 ) {
-  const run = await createQueryRunFromSavedQuery(savedQueryId, triggerType, retryOfRunId, attemptNumber);
+  const run = await createQueryRunFromSavedQuery(
+    savedQueryId,
+    triggerType,
+    retryOfRunId,
+    attemptNumber
+  );
   await runRankingWorkflow(run.id);
   return run;
 }
@@ -220,9 +256,13 @@ export async function runRankingWorkflow(runId: string) {
     const token = await getGitHubAccessToken(run.userId);
     const client = new GitHubClient(token);
     const searchResult = await collectCandidates(client, input);
-    const candidates = searchResult.candidates.map((candidate: RankedRepository) => ({ ...candidate })) as RankedRepository[];
+    const candidates = searchResult.candidates.map((candidate: RankedRepository) => ({
+      ...candidate
+    })) as RankedRepository[];
     const repositoryMap = await upsertRepositories(candidates);
-    const byGitHubId = new Map(repositoryMap.map((entry) => [entry.candidate.githubId, entry]));
+    const byGitHubId = new Map(
+      repositoryMap.map((entry) => [entry.candidate.githubId, entry])
+    );
 
     if (input.rankingMode === "growth") {
       for (const repo of candidates) {
@@ -230,7 +270,9 @@ export async function runRankingWorkflow(runId: string) {
         if (!repository) continue;
 
         await syncStarEvents(client, repository.repositoryId, repo, input.windowDays);
-        const windowStart = new Date(Date.now() - input.windowDays * 24 * 60 * 60 * 1000);
+        const windowStart = new Date(
+          Date.now() - input.windowDays * 24 * 60 * 60 * 1000
+        );
         const starGain = await db.repoStarEvent.count({
           where: {
             repositoryId: repository.repositoryId,
@@ -245,7 +287,9 @@ export async function runRankingWorkflow(runId: string) {
     }
 
     const ranked =
-      input.rankingMode === "growth" ? rankGrowth(candidates, input) : rankNewHot(candidates, input);
+      input.rankingMode === "growth"
+        ? rankGrowth(candidates, input)
+        : rankNewHot(candidates, input);
 
     await db.queryRunResult.deleteMany({
       where: {
@@ -276,43 +320,57 @@ export async function runRankingWorkflow(runId: string) {
         status: QueryRunStatus.completed,
         resultCount: ranked.length,
         partial: searchResult.partial,
-        quotaSnapshot: searchResult.quotaSnapshot,
+        quotaSnapshot: serializeQuotaSnapshot(searchResult.quotaSnapshot),
         finishedAt: new Date()
       }
     });
 
     if (run.savedQueryId) {
-      const savedQuery = await db.savedQuery.findUnique({ where: { id: run.savedQueryId } });
+      const savedQuery = await db.savedQuery.findUnique({
+        where: { id: run.savedQueryId }
+      });
       await updateSavedQuerySummary(run.savedQueryId, {
         lastRunAt: new Date(),
         lastRunStatus: "completed",
         lastRunError: null,
         lastRunResultCount: ranked.length,
         lastRunQueryRunId: run.id,
-        nextRunAt: savedQuery?.scheduleCron && savedQuery?.isActive ? getNextRunAtForCron(savedQuery.scheduleCron) : null
+        nextRunAt:
+          savedQuery?.scheduleCron && savedQuery.isActive
+            ? getNextRunAtForCron(savedQuery.scheduleCron)
+            : null
       });
     }
 
     return ranked.map(serializeMetric);
   } catch (error) {
+    console.error("[workflow][runRankingWorkflow]", { runId, error });
     await db.queryRun.update({
       where: { id: runId },
       data: {
         status: QueryRunStatus.failed,
-        error: error instanceof Error ? error.message : "Unknown ranking workflow error.",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unknown ranking workflow error.",
         finishedAt: new Date()
       }
     });
 
     if (run.savedQueryId) {
-      const savedQuery = await db.savedQuery.findUnique({ where: { id: run.savedQueryId } });
+      const savedQuery = await db.savedQuery.findUnique({
+        where: { id: run.savedQueryId }
+      });
       await updateSavedQuerySummary(run.savedQueryId, {
         lastRunAt: new Date(),
         lastRunStatus: "failed",
         lastRunError: error instanceof Error ? error.message : "未知错误",
         lastRunResultCount: 0,
         lastRunQueryRunId: run.id,
-        nextRunAt: savedQuery?.scheduleCron && savedQuery?.isActive ? getNextRunAtForCron(savedQuery.scheduleCron) : null
+        nextRunAt:
+          savedQuery?.scheduleCron && savedQuery.isActive
+            ? getNextRunAtForCron(savedQuery.scheduleCron)
+            : null
       });
     }
 
@@ -340,7 +398,7 @@ async function loadRunRepos(runId: string) {
   }
 
   const input = queryInputSchema.parse(run.inputJson) as QueryInput;
-  const repos: RankedRepository[] = run.results.map((result: any) => ({
+  const repos: RankedRepository[] = run.results.map((result) => ({
     githubId: result.repository.githubId,
     owner: result.repository.owner,
     name: result.repository.name,
@@ -365,7 +423,9 @@ async function loadRunRepos(runId: string) {
 
 export async function createShareDraftFromRun(runId: string, channel: ShareChannel) {
   const { input, repos, run } = await loadRunRepos(runId);
-  const payload = buildShareDraft(channel, runId, input, repos);
+  const payload = shareDraftPayloadSchema.parse(
+    await buildShareDraft(channel, runId, input, repos)
+  );
   const extension = channel === "wechat_article" ? "md" : "txt";
   const content = [
     payload.titleOptions.join("\n"),
@@ -374,30 +434,38 @@ export async function createShareDraftFromRun(runId: string, channel: ShareChann
     "",
     `标签：${payload.hashtags.join(" ")}`
   ].join("\n");
-  const exportPath = await writeTextArtifact("share", `${runId}-${channel}.${extension}`, content);
+  const exportPath = await writeTextArtifact(
+    "share",
+    `${runId}-${channel}.${extension}`,
+    content
+  );
 
   return db.shareDraft.create({
     data: {
       userId: run.userId,
       queryRunId: runId,
       channel,
-      payload,
+      payload: serializeShareDraftPayload(payload),
       exportPath
     }
   });
 }
 
-export async function createVideoJob(runId: string, userId: string, format: VideoFormat) {
+export async function createVideoJob(
+  runId: string,
+  userId: string,
+  format: VideoFormat
+) {
   const { input, repos } = await loadRunRepos(runId);
-  const { buildVideoScript } = await import("@/lib/video/script");
-  const script = buildVideoScript(format, input, repos);
+  const { buildVideoScript, serializeVideoScript } = await import("@/lib/video/script");
+  const script = await buildVideoScript(format, input, repos);
 
   return db.videoJob.create({
     data: {
       userId,
       queryRunId: runId,
       format,
-      scriptJson: script,
+      scriptJson: serializeVideoScript(script),
       status: VideoJobStatus.pending
     }
   });
@@ -417,7 +485,8 @@ export async function processVideoJob(jobId: string) {
     throw new Error(`Video job ${jobId} not found.`);
   }
 
-  const script = job.scriptJson as unknown as VideoScript;
+  const { videoScriptSchema } = await import("@/lib/types");
+  const script = videoScriptSchema.parse(job.scriptJson) as VideoScript;
   await db.videoJob.update({
     where: { id: jobId },
     data: {
@@ -427,29 +496,49 @@ export async function processVideoJob(jobId: string) {
   });
 
   try {
+    if (getVideoClipProvider() === "zai") {
+      const { generateSceneClips } = await import("@/lib/video/clip-orchestrator");
+      const clipMap = await generateSceneClips(script.scenes, job.format as VideoFormat);
+      for (const [index, clipPath] of clipMap) {
+        script.scenes[index].clipPath = clipPath;
+      }
+    }
+
     const provider = createSpeechProvider();
-    const narration = script.narrationSegments.map((segment) => segment.text).join("\n");
+    const narration = script.narrationSegments
+      .map((segment) => segment.text)
+      .join("\n");
     const { audioPath } = await provider.synthesize(job.id, narration);
     const captions = script.captionSegments;
-    const videoPath = await renderVideoJob(job.id, job.format as VideoFormat, script, audioPath, captions);
+    const videoPath = await renderVideoJob(
+      job.id,
+      job.format as VideoFormat,
+      script,
+      audioPath,
+      captions
+    );
 
     await db.videoJob.update({
       where: { id: jobId },
       data: {
         status: VideoJobStatus.completed,
         audioPath,
-        captionJson: captions,
+        captionJson: serializeCaptionSegments(captions),
         videoPath
       }
     });
 
     return videoPath;
   } catch (error) {
+    console.error("[workflow][processVideoJob]", { jobId, error });
     await db.videoJob.update({
       where: { id: jobId },
       data: {
         status: VideoJobStatus.failed,
-        error: error instanceof Error ? error.message : "Unknown video rendering failure."
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unknown video rendering failure."
       }
     });
     throw error;
@@ -461,11 +550,21 @@ export async function triggerRetryIfNeeded(runId: string) {
     where: { id: runId }
   });
 
-  if (!run || !run.savedQueryId || run.triggerType !== "scheduled" || run.attemptNumber >= 2) {
+  if (
+    !run ||
+    !run.savedQueryId ||
+    run.triggerType !== "scheduled" ||
+    run.attemptNumber >= 2
+  ) {
     return null;
   }
 
-  const retryRun = await createQueryRunFromSavedQuery(run.savedQueryId, "retry", run.id, 2);
+  const retryRun = await createQueryRunFromSavedQuery(
+    run.savedQueryId,
+    "retry",
+    run.id,
+    2
+  );
   await runRankingWorkflow(retryRun.id);
   return retryRun;
 }

@@ -6,20 +6,7 @@ import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { readApiError } from "@/lib/client-api";
 import { getShareChannelLabel } from "@/lib/display";
-
-type EditorDraft = {
-  id: string;
-  channel: string;
-  exportPath: string | null;
-  createdAt: string;
-  payload: {
-    titleOptions: string[];
-    body: string;
-    hashtags: string[];
-    coverText: string;
-    sourceRunId?: string;
-  };
-};
+import type { NormalizedShareDraft } from "@/lib/share-drafts";
 
 function splitLines(value: string) {
   return value
@@ -49,12 +36,12 @@ function formatDate(value: string) {
   });
 }
 
-export function ShareDraftEditor({ draft }: { draft: EditorDraft }) {
-  const [title, setTitle] = useState(draft.payload.titleOptions[0] || "");
-  const [altTitles, setAltTitles] = useState(draft.payload.titleOptions.slice(1).join("\n"));
-  const [coverText, setCoverText] = useState(draft.payload.coverText || "");
-  const [hashtags, setHashtags] = useState(draft.payload.hashtags.join(" "));
-  const [body, setBody] = useState(draft.payload.body || "");
+export function ShareDraftEditor({ draft }: { draft: NormalizedShareDraft }) {
+  const [title, setTitle] = useState(draft.titleOptions[0] || "");
+  const [altTitles, setAltTitles] = useState(draft.titleOptions.slice(1).join("\n"));
+  const [coverText, setCoverText] = useState(draft.coverText || "");
+  const [hashtags, setHashtags] = useState(draft.hashtags.join(" "));
+  const [body, setBody] = useState(draft.body || "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -90,7 +77,7 @@ export function ShareDraftEditor({ draft }: { draft: EditorDraft }) {
           coverText,
           hashtags: previewTags,
           body,
-          sourceRunId: draft.payload.sourceRunId
+          sourceRunId: draft.sourceRunId
         }
       })
     });
@@ -147,7 +134,7 @@ export function ShareDraftEditor({ draft }: { draft: EditorDraft }) {
         <div className="share-editor-summary__meta">
           <div className="share-editor-info-chip">
             <span>来源 Run</span>
-            <strong>{draft.payload.sourceRunId || "未知"}</strong>
+            <strong>{draft.sourceRunId || "未知"}</strong>
           </div>
           <div className="share-editor-info-chip">
             <span>导出状态</span>

@@ -1,9 +1,11 @@
+import { QueryRunStatus, QueryRunTriggerType } from "@prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import styles from "@/app/queries/queries.module.css";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { QueryRunInsights } from "@/components/query-run-insights";
 import { SubscriptionActions } from "@/components/subscription-actions";
 import { authOptions } from "@/lib/auth";
 import {
@@ -14,6 +16,34 @@ import {
   getTriggerTypeLabel
 } from "@/lib/display";
 import { prisma } from "@/lib/prisma";
+
+function parseStatus(value?: string) {
+  switch (value) {
+    case "completed":
+      return QueryRunStatus.completed;
+    case "failed":
+      return QueryRunStatus.failed;
+    case "running":
+      return QueryRunStatus.running;
+    case "pending":
+      return QueryRunStatus.pending;
+    default:
+      return undefined;
+  }
+}
+
+function parseTriggerType(value?: string) {
+  switch (value) {
+    case "manual":
+      return QueryRunTriggerType.manual;
+    case "scheduled":
+      return QueryRunTriggerType.scheduled;
+    case "retry":
+      return QueryRunTriggerType.retry;
+    default:
+      return undefined;
+  }
+}
 
 export default async function QueriesPage({
   searchParams
@@ -30,8 +60,10 @@ export default async function QueriesPage({
   const resolvedSearchParams = (await searchParams) ?? {};
   const selectedStatus = resolvedSearchParams.status ?? "";
   const selectedTriggerType = resolvedSearchParams.triggerType ?? "";
-  const db = prisma as any;
-  const subscriptions = await db.savedQuery.findMany({
+  const statusFilter = parseStatus(selectedStatus);
+  const triggerTypeFilter = parseTriggerType(selectedTriggerType);
+
+  const subscriptions = await prisma.savedQuery.findMany({
     where: {
       userId
     },
@@ -40,14 +72,14 @@ export default async function QueriesPage({
     }
   });
 
-  const recentRuns = await db.queryRun.findMany({
+  const recentRuns = await prisma.queryRun.findMany({
     where: {
       userId,
       savedQueryId: {
         not: null
       },
-      ...(selectedStatus ? { status: selectedStatus } : {}),
-      ...(selectedTriggerType ? { triggerType: selectedTriggerType } : {})
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(triggerTypeFilter ? { triggerType: triggerTypeFilter } : {})
     },
     include: {
       savedQuery: {
@@ -63,7 +95,7 @@ export default async function QueriesPage({
     take: 24
   });
 
-  const latestDigest = await db.dailyDigest.findFirst({
+  const latestDigest = await prisma.dailyDigest.findFirst({
     where: {
       userId
     },
@@ -73,13 +105,17 @@ export default async function QueriesPage({
   });
 
   const activeSubscriptionCount = subscriptions.filter(
-    (item: any) => item.isActive && item.scheduleCron
+    (item) => item.isActive && item.scheduleCron
   ).length;
   const failedSubscriptionCount = subscriptions.filter(
-    (item: any) => item.lastRunStatus === "failed"
+    (item) => item.lastRunStatus === "failed"
   ).length;
 
-  function getStatusPillClass(subscription: any) {
+  function getStatusPillClass(subscription: {
+    isActive: boolean;
+    scheduleCron: string | null;
+    lastRunStatus: string | null;
+  }) {
     const label = getSubscriptionStateLabel({
       isActive: subscription.isActive,
       scheduleCron: subscription.scheduleCron,
@@ -168,7 +204,7 @@ export default async function QueriesPage({
 
           {subscriptions.length ? (
             <div className={styles.subscriptionList}>
-              {subscriptions.map((subscription: any) => (
+              {subscriptions.map((subscription) => (
                 <article className={styles.subscriptionCard} key={subscription.id}>
                   <div className={styles.subscriptionTop}>
                     <div className="stack">
@@ -297,7 +333,7 @@ export default async function QueriesPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {recentRuns.map((run: any) => (
+                  {recentRuns.map((run) => (
                     <tr key={run.id}>
                       <td>{formatDateTime(run.createdAt)}</td>
                       <td>{run.savedQuery?.title ?? "未知订阅"}</td>
@@ -321,6 +357,12 @@ export default async function QueriesPage({
               <p>还没有自动化运行记录。保存一个带计划的订阅后，这里会显示最近流水。</p>
             )}
           </article>
+
+          <QueryRunInsights
+            runs={recentRuns}
+            selectedStatus={selectedStatus}
+            selectedTriggerType={selectedTriggerType}
+          />
         </section>
       </main>
     </div>

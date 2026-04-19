@@ -1,4 +1,45 @@
+import { createTextProvider } from "@/lib/ai/text";
+import { getTextProvider } from "@/lib/env";
+import { shareDraftPayloadSchema } from "@/lib/share-drafts";
+import { buildShareSystemPrompt, buildShareUserPrompt } from "@/lib/share/prompts";
 import type { QueryInput, RankedRepository, ShareChannel, ShareDraftPayload } from "@/lib/types";
+
+export function parseShareDraftModelOutput(
+  raw: string,
+  channel: ShareChannel,
+  runId: string
+): ShareDraftPayload {
+  const parsed = JSON.parse(raw) as {
+    titleOptions?: string[];
+    body?: string;
+    coverText?: string;
+    hashtags?: string[];
+  };
+
+  return shareDraftPayloadSchema.parse({
+    channel,
+    sourceRunId: runId,
+    titleOptions: parsed.titleOptions,
+    body: parsed.body,
+    coverText: parsed.coverText,
+    hashtags: parsed.hashtags
+  });
+}
+
+async function buildShareDraftWithAI(
+  channel: ShareChannel,
+  runId: string,
+  input: QueryInput,
+  repos: RankedRepository[]
+): Promise<ShareDraftPayload> {
+  const provider = createTextProvider();
+  const raw = await provider.generate(
+    buildShareSystemPrompt(channel),
+    buildShareUserPrompt(input, repos, runId)
+  );
+
+  return parseShareDraftModelOutput(raw, channel, runId);
+}
 
 function makeIntro(input: QueryInput, repos: RankedRepository[]) {
   const metricLabel = input.rankingMode === "growth" ? "增星速度" : "新项目总星";
@@ -17,7 +58,23 @@ function makeRepoLines(repos: RankedRepository[]) {
   });
 }
 
-export function buildShareDraft(
+export async function buildShareDraft(
+  channel: ShareChannel,
+  runId: string,
+  input: QueryInput,
+  repos: RankedRepository[]
+): Promise<ShareDraftPayload> {
+  if (getTextProvider() !== "zai" && getTextProvider() !== "openai") {
+    return buildShareDraftTemplate(channel, runId, input, repos);
+  }
+  try {
+    return await buildShareDraftWithAI(channel, runId, input, repos);
+  } catch {
+    return buildShareDraftTemplate(channel, runId, input, repos);
+  }
+}
+
+function buildShareDraftTemplate(
   channel: ShareChannel,
   runId: string,
   input: QueryInput,
@@ -77,4 +134,3 @@ export function buildShareDraft(
     ].join("\n")
   };
 }
-

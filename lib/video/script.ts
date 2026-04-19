@@ -1,4 +1,15 @@
-import type { QueryInput, RankedRepository, VideoFormat, VideoScript } from "@/lib/types";
+import type { Prisma } from "@prisma/client";
+
+import { createTextProvider } from "@/lib/ai/text";
+import { getTextProvider } from "@/lib/env";
+import {
+  videoScriptSchema,
+  type QueryInput,
+  type RankedRepository,
+  type VideoFormat,
+  type VideoScript
+} from "@/lib/types";
+import { buildVideoScriptSystemPrompt, buildVideoScriptUserPrompt } from "@/lib/video/prompts";
 
 const formatConfigs: Record<VideoFormat, { maxScenes: number; introMs: number; repoMs: number; outroMs: number }> = {
   vertical_60: {
@@ -15,7 +26,84 @@ const formatConfigs: Record<VideoFormat, { maxScenes: number; introMs: number; r
   }
 };
 
-export function buildVideoScript(format: VideoFormat, input: QueryInput, repos: RankedRepository[]): VideoScript {
+async function buildVideoScriptWithAI(
+  format: VideoFormat,
+  input: QueryInput,
+  repos: RankedRepository[]
+): Promise<VideoScript> {
+  const config = formatConfigs[format];
+  const selected = repos.slice(0, config.maxScenes);
+  const provider = createTextProvider();
+  const raw = await provider.generate(
+    buildVideoScriptSystemPrompt(format),
+    buildVideoScriptUserPrompt(
+      format,
+      input.rankingMode,
+      input.windowDays,
+      input.keyword,
+      selected
+    )
+  );
+
+  return parseVideoScriptModelOutput(raw, format);
+}
+
+export function parseVideoScriptModelOutput(
+  raw: string,
+  format: VideoFormat
+): VideoScript {
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+  return videoScriptSchema.parse({
+    ...parsed,
+    format
+  });
+}
+
+export function serializeVideoScript(script: VideoScript): Prisma.InputJsonObject {
+  return {
+    format: script.format,
+    scenes: script.scenes.map((scene) => ({
+      title: scene.title,
+      body: scene.body,
+      accent: scene.accent,
+      ...(scene.repoName ? { repoName: scene.repoName } : {}),
+      ...(scene.clipPath ? { clipPath: scene.clipPath } : {})
+    })),
+    narrationSegments: script.narrationSegments.map((segment) => ({
+      startMs: segment.startMs,
+      endMs: segment.endMs,
+      text: segment.text
+    })),
+    captionSegments: script.captionSegments.map((segment) => ({
+      startMs: segment.startMs,
+      endMs: segment.endMs,
+      text: segment.text
+    })),
+    cta: script.cta
+  };
+}
+
+export async function buildVideoScript(
+  format: VideoFormat,
+  input: QueryInput,
+  repos: RankedRepository[]
+): Promise<VideoScript> {
+  if (getTextProvider() === "zai" || getTextProvider() === "openai") {
+    try {
+      return await buildVideoScriptWithAI(format, input, repos);
+    } catch {
+      return buildVideoScriptTemplate(format, input, repos);
+    }
+  }
+  return buildVideoScriptTemplate(format, input, repos);
+}
+
+function buildVideoScriptTemplate(
+  format: VideoFormat,
+  input: QueryInput,
+  repos: RankedRepository[]
+): VideoScript {
   const config = formatConfigs[format];
   const selected = repos.slice(0, config.maxScenes);
   let cursor = 0;

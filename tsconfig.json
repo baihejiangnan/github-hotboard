@@ -16,10 +16,11 @@
     "plugins": [{ "name": "next" }],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "remotion": ["./node_modules/remotion"],
+      "remotion/*": ["./node_modules/remotion/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }
-

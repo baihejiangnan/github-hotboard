@@ -8,6 +8,7 @@ import { ShareDraftEditor } from "@/components/share-draft-editor";
 import { authOptions } from "@/lib/auth";
 import { getShareChannelLabel } from "@/lib/display";
 import { prisma } from "@/lib/prisma";
+import { normalizeShareDraft } from "@/lib/share-drafts";
 
 export default async function ShareDraftDetailPage({
   params
@@ -22,24 +23,18 @@ export default async function ShareDraftDetailPage({
   }
 
   const { id } = await params;
-  const db = prisma as any;
-  const draft = await db.shareDraft.findFirst({
+  const draft = await prisma.shareDraft.findFirst({
     where: {
       id,
       userId
-    },
-    include: {
-      queryRun: {
-        select: {
-          id: true
-        }
-      }
     }
   });
 
   if (!draft) {
     notFound();
   }
+
+  const normalizedDraft = normalizeShareDraft(draft);
 
   return (
     <DashboardPage
@@ -49,13 +44,13 @@ export default async function ShareDraftDetailPage({
           返回草稿列表
         </Link>
       }
-      description={`正在编辑 ${getShareChannelLabel(draft.channel)}，这里适合在发布前做最后一轮精修和预览。`}
+      description={`正在编辑 ${getShareChannelLabel(normalizedDraft.channel)}，这里适合在发布前做最后一轮精修和预览。`}
       eyebrow="Share Draft"
-      title={draft.titleOptions?.[0] || "独立草稿编辑页"}
+      title={normalizedDraft.title}
       userName={session?.user?.name}
     >
       <section className={styles.section}>
-        <ShareDraftEditor draft={draft} />
+        <ShareDraftEditor draft={normalizedDraft} />
       </section>
     </DashboardPage>
   );

@@ -28,8 +28,7 @@ export default async function QueryDetailPage({
   }
 
   const { id } = await params;
-  const db = prisma as any;
-  const subscription = await db.savedQuery.findFirst({
+  const subscription = await prisma.savedQuery.findFirst({
     where: {
       id,
       userId
@@ -149,7 +148,7 @@ export default async function QueryDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {subscription.queryRuns.map((run: any) => (
+                  {subscription.queryRuns.map((run) => (
                     <tr key={run.id}>
                       <td>{formatDateTime(run.createdAt)}</td>
                       <td>{getRunStatusLabel(run.status)}</td>

@@ -9,4 +9,4 @@ data
 .env.local
 *.log
 prisma/dev.db
-
+tsconfig.tsbuildinfo

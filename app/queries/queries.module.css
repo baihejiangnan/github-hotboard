@@ -792,3 +792,139 @@
     height: 560px;
   }
 }
+
+.analyticsSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.analyticsSummaryCard,
+.analyticsCard {
+  border-radius: 26px;
+  border: 1px solid rgba(209, 190, 169, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 242, 0.9));
+  box-shadow: 0 20px 60px rgba(163, 124, 87, 0.1);
+}
+
+.analyticsSummaryCard {
+  display: grid;
+  gap: 10px;
+  padding: 18px 18px 16px;
+}
+
+.analyticsSummaryCard strong {
+  font-size: clamp(1.3rem, 2vw, 1.9rem);
+  line-height: 1.05;
+}
+
+.analyticsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.analyticsCard {
+  display: grid;
+  gap: 18px;
+  padding: 20px 20px 18px;
+}
+
+.analyticsCardHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.analyticsCardHead h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.chartBars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 12px;
+  align-items: end;
+  min-height: 220px;
+}
+
+.chartBarColumn {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+}
+
+.chartBarTrack {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  border-radius: 18px;
+  border: 1px solid rgba(214, 196, 176, 0.38);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(252, 243, 235, 0.94));
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+
+.chartBarFill {
+  width: 100%;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(180deg, rgba(120, 161, 255, 0.92), rgba(71, 120, 233, 0.98));
+  box-shadow: 0 12px 28px rgba(69, 114, 214, 0.24);
+}
+
+.chartBarColumn strong {
+  font-size: 1rem;
+}
+
+.chartBarColumn span {
+  font-size: 0.9rem;
+  color: rgba(45, 33, 22, 0.92);
+}
+
+.chartBarColumn small,
+.horizontalBarRow small {
+  color: rgba(72, 54, 39, 0.66);
+}
+
+.horizontalBars {
+  display: grid;
+  gap: 14px;
+}
+
+.horizontalBarRow {
+  display: grid;
+  gap: 8px;
+}
+
+.horizontalBarHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.horizontalBarTrack {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(233, 221, 208, 0.72);
+  overflow: hidden;
+}
+
+.horizontalBarFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 172, 120, 0.96), rgba(255, 122, 91, 0.96));
+  box-shadow: 0 8px 16px rgba(232, 121, 90, 0.2);
+}
+
+@media (max-width: 1240px) {
+  .analyticsSummaryGrid,
+  .analyticsGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -49,9 +49,16 @@ export async function POST(request: Request) {
     }
 
     const job = await createVideoJob(run.id, user.id, input.format);
+    let responseJob = job;
 
     if (shouldInlineRender()) {
       await processVideoJob(job.id);
+      responseJob =
+        (await prisma.videoJob.findUnique({
+          where: {
+            id: job.id
+          }
+        })) ?? job;
     } else {
       try {
         await publishVideoJob(job.id);
@@ -60,7 +67,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json(job, { status: 201 });
+    return NextResponse.json(responseJob, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create video job.";
     return NextResponse.json(
