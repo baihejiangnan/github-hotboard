@@ -1,0 +1,794 @@
+.layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 28px;
+  display: grid;
+  gap: 22px;
+  padding: 26px;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 206, 164, 0.34), transparent 48%),
+    rgba(255, 252, 247, 0.9);
+  border: 1px solid rgba(210, 186, 163, 0.34);
+  box-shadow: 0 20px 60px rgba(163, 124, 87, 0.16);
+}
+
+.brand h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1;
+}
+
+.muted {
+  color: rgba(72, 54, 39, 0.78);
+}
+
+.nav {
+  display: grid;
+  gap: 14px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(205, 187, 166, 0.46);
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.navItem:hover,
+.navItemActive {
+  transform: translateY(-1px);
+  border-color: rgba(104, 138, 246, 0.32);
+  box-shadow: 0 18px 38px rgba(102, 143, 233, 0.12);
+}
+
+.navItemActive {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(242, 248, 255, 0.95));
+}
+
+.userCard {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(206, 188, 168, 0.4);
+}
+
+.main {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.hero,
+.summaryCard,
+.subscriptionCard,
+.emptyCard,
+.tableCard {
+  border-radius: 26px;
+  border: 1px solid rgba(209, 190, 169, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 242, 0.9));
+  box-shadow: 0 20px 60px rgba(163, 124, 87, 0.1);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  padding: 24px 26px;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 10px;
+  padding: 18px 18px 16px;
+}
+
+.summaryLabel {
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+  color: rgba(72, 54, 39, 0.62);
+}
+
+.summaryCard strong {
+  font-size: clamp(1.2rem, 2vw, 1.75rem);
+  line-height: 1.05;
+}
+
+.section {
+  display: grid;
+  gap: 16px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.sectionHead h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2vw, 2rem);
+}
+
+.subscriptionList {
+  display: grid;
+  gap: 18px;
+}
+
+.subscriptionCard {
+  display: grid;
+  gap: 18px;
+  padding: 20px 20px 18px;
+}
+
+.subscriptionTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.subscriptionTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.subscriptionTitleRow h3 {
+  margin: 0;
+  font-size: 1.28rem;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.statusActive {
+  background: rgba(229, 241, 255, 0.92);
+  border: 1px solid rgba(105, 142, 239, 0.24);
+  color: rgba(37, 63, 122, 0.9);
+}
+
+.statusPaused {
+  background: rgba(249, 240, 225, 0.92);
+  border: 1px solid rgba(210, 173, 104, 0.3);
+  color: rgba(116, 78, 21, 0.9);
+}
+
+.statusManual {
+  background: rgba(240, 240, 240, 0.92);
+  border: 1px solid rgba(175, 175, 175, 0.32);
+  color: rgba(82, 82, 82, 0.92);
+}
+
+.statusFailed {
+  background: rgba(255, 233, 233, 0.94);
+  border: 1px solid rgba(215, 103, 103, 0.28);
+  color: rgba(143, 34, 34, 0.92);
+}
+
+.subscriptionMeta {
+  color: rgba(72, 54, 39, 0.78);
+}
+
+.subscriptionLinks {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fact {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(212, 196, 177, 0.36);
+}
+
+.fact span {
+  font-size: 0.86rem;
+  color: rgba(72, 54, 39, 0.62);
+}
+
+.fact strong {
+  line-height: 1.45;
+}
+
+.errorText {
+  color: rgba(154, 54, 54, 0.86);
+}
+
+.emptyCard {
+  display: grid;
+  gap: 14px;
+  padding: 30px;
+}
+
+.emptyCard h3 {
+  margin: 0;
+}
+
+.tableCard {
+  padding: 14px 16px;
+  overflow-x: auto;
+}
+
+.tableCard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableCard th,
+.tableCard td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(214, 196, 176, 0.38);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tableCard th {
+  font-size: 0.9rem;
+  color: rgba(72, 54, 39, 0.72);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.compactCard {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(209, 190, 169, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 242, 0.9));
+  box-shadow: 0 20px 50px rgba(163, 124, 87, 0.08);
+}
+
+.shareListItemActive {
+  border-color: rgba(104, 138, 246, 0.35);
+  box-shadow: 0 18px 42px rgba(102, 143, 233, 0.14);
+}
+
+.compactCard h2,
+.compactCard h3 {
+  margin: 0;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.previewPanel {
+  min-height: 440px;
+  max-height: 440px;
+  overflow: auto;
+  padding: 18px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 246, 0.96), rgba(255, 243, 235, 0.9));
+  border: 1px solid rgba(220, 199, 177, 0.38);
+}
+
+.previewShell {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.previewDocument {
+  display: grid;
+  gap: 18px;
+  min-height: 100%;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 242, 0.94));
+  border: 1px solid rgba(219, 198, 177, 0.42);
+  box-shadow: 0 16px 34px rgba(165, 127, 90, 0.08);
+}
+
+.previewDocumentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.previewDocumentBody {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.previewTitle {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.previewCover {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(92, 69, 48, 0.82);
+}
+
+.previewCopy {
+  display: grid;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(221, 202, 183, 0.5);
+}
+
+.previewCopy :global(.markdown-renderer) {
+  display: grid;
+  gap: 16px;
+}
+
+.previewCopy :global(.markdown-renderer p),
+.previewCopy :global(.markdown-renderer li),
+.previewCopy :global(.markdown-renderer blockquote) {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.85;
+  color: rgba(44, 33, 24, 0.92);
+  white-space: pre-wrap;
+}
+
+.previewCopy :global(.markdown-renderer h1),
+.previewCopy :global(.markdown-renderer h2),
+.previewCopy :global(.markdown-renderer h3),
+.previewCopy :global(.markdown-renderer h4) {
+  margin: 0;
+  line-height: 1.3;
+}
+
+.previewEmpty {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 100%;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 242, 0.94));
+  border: 1px solid rgba(219, 198, 177, 0.42);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(205, 187, 166, 0.52);
+  color: rgba(37, 29, 22, 0.92);
+  text-decoration: none;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.filterChip:hover,
+.filterChipActive {
+  transform: translateY(-1px);
+  border-color: rgba(104, 138, 246, 0.32);
+  box-shadow: 0 10px 22px rgba(102, 143, 233, 0.12);
+}
+
+@media (max-width: 1240px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .facts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero,
+  .subscriptionTop,
+  .sectionHead {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cardGrid {
+  align-items: stretch;
+}
+
+.listBrowserCard,
+.previewBrowserCard {
+  height: 100%;
+}
+
+.listBrowserShell,
+.previewShell {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  height: 100%;
+}
+
+.previewShell {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.listBrowserHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.listBrowserItems {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.paginationLabel {
+  font-size: 0.94rem;
+  color: rgba(72, 54, 39, 0.72);
+}
+
+.previewPanelFull {
+  min-height: 760px;
+  max-height: 760px;
+}
+
+.previewDocument {
+  display: grid;
+  gap: 18px;
+  min-height: 100%;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 242, 0.94));
+  border: 1px solid rgba(219, 198, 177, 0.42);
+  box-shadow: 0 16px 34px rgba(165, 127, 90, 0.08);
+}
+
+.previewDocumentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.previewDocumentBody {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.previewTitle {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.previewCover {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(92, 69, 48, 0.82);
+}
+
+.previewCopy {
+  display: grid;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(221, 202, 183, 0.5);
+}
+
+.previewCopy :global(.markdown-renderer) {
+  display: grid;
+  gap: 16px;
+}
+
+.previewCopy :global(.markdown-renderer p),
+.previewCopy :global(.markdown-renderer li),
+.previewCopy :global(.markdown-renderer blockquote) {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.85;
+  color: rgba(44, 33, 24, 0.92);
+  white-space: pre-wrap;
+}
+
+.previewCopy :global(.markdown-renderer h1),
+.previewCopy :global(.markdown-renderer h2),
+.previewCopy :global(.markdown-renderer h3),
+.previewCopy :global(.markdown-renderer h4) {
+  margin: 0;
+  line-height: 1.3;
+}
+
+.previewEmpty {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 100%;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 242, 0.94));
+  border: 1px solid rgba(219, 198, 177, 0.42);
+}
+
+@media (max-width: 1240px) {
+  .listBrowserHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .previewPanelFull {
+    min-height: 520px;
+    max-height: 520px;
+  }
+}
+
+.layout {
+  --dashboard-hero-height: 176px;
+  padding-top: 20px;
+}
+
+.hero {
+  min-height: var(--dashboard-hero-height);
+  align-self: start;
+}
+
+.statusPreview {
+  background: rgba(224, 244, 235, 0.96);
+  border: 1px solid rgba(94, 173, 124, 0.26);
+  color: rgba(39, 104, 63, 0.92);
+}
+
+.listBrowserCard,
+.previewBrowserCard {
+  height: 100%;
+}
+
+.listBrowserShell,
+.previewShell {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  height: 100%;
+}
+
+.listBrowserHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.listBrowserItems {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.paginationLabel {
+  font-size: 0.94rem;
+  color: rgba(72, 54, 39, 0.72);
+}
+
+.previewPanelAligned {
+  min-height: 760px;
+  max-height: 760px;
+  height: 760px;
+}
+
+.previewDocument {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+  height: 100%;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 242, 0.94));
+  border: 1px solid rgba(219, 198, 177, 0.42);
+  box-shadow: 0 16px 34px rgba(165, 127, 90, 0.08);
+}
+
+.previewDocumentHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+  padding-bottom: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 248, 243, 0.94));
+  border-bottom: 1px solid rgba(221, 202, 183, 0.5);
+}
+
+.previewHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.previewDocumentLead {
+  display: grid;
+  gap: 12px;
+}
+
+.previewTitle {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.previewCover {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: rgba(92, 69, 48, 0.82);
+}
+
+.previewDocumentScroll {
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.previewCopy {
+  display: grid;
+  gap: 10px;
+}
+
+.previewCopy :global(.markdown-renderer) {
+  display: grid;
+  gap: 16px;
+}
+
+.previewCopy :global(.markdown-renderer p),
+.previewCopy :global(.markdown-renderer li),
+.previewCopy :global(.markdown-renderer blockquote) {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.82;
+  color: rgba(44, 33, 24, 0.92);
+  white-space: pre-wrap;
+}
+
+.previewCopy :global(.markdown-renderer h1),
+.previewCopy :global(.markdown-renderer h2),
+.previewCopy :global(.markdown-renderer h3),
+.previewCopy :global(.markdown-renderer h4) {
+  margin: 0;
+  line-height: 1.3;
+}
+
+.previewEmpty {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 100%;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 242, 0.94));
+  border: 1px solid rgba(219, 198, 177, 0.42);
+}
+
+@media (max-width: 1240px) {
+  .hero {
+    min-height: 0;
+  }
+
+  .listBrowserHeader,
+  .previewHeaderTop {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .previewPanelAligned {
+    min-height: 560px;
+    max-height: 560px;
+    height: 560px;
+  }
+}

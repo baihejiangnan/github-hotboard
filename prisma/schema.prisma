@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum QueryRunStatus {
+  pending
+  running
+  completed
+  failed
+}
+
+enum VideoJobStatus {
+  pending
+  rendering
+  completed
+  failed
+}
+
+enum QueryRunTriggerType {
+  manual
+  scheduled
+  retry
+}
+
+enum DailyDigestStatus {
+  pending
+  sent
+  skipped
+  failed
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String?       @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  savedQueries  SavedQuery[]
+  queryRuns     QueryRun[]
+  shareDrafts   ShareDraft[]
+  videoJobs     VideoJob[]
+  dailyDigests  DailyDigest[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model SavedQuery {
+  id               String      @id @default(cuid())
+  userId           String
+  title            String
+  rankingMode      String
+  windowDays       Int
+  keyword          String?
+  language         String?
+  topic            String?
+  limit            Int
+  channelPreset    Json
+  scheduleCron     String?
+  isActive         Boolean     @default(true)
+  nextRunAt        DateTime?
+  lastRunAt        DateTime?
+  lastRunStatus    String?
+  lastRunError     String?
+  lastRunResultCount Int?
+  lastRunQueryRunId String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  queryRuns        QueryRun[]
+}
+
+model QueryRun {
+  id            String             @id @default(cuid())
+  userId        String
+  savedQueryId  String?
+  inputJson     Json
+  status        QueryRunStatus     @default(pending)
+  triggerType   QueryRunTriggerType @default(manual)
+  retryOfRunId  String?
+  attemptNumber Int                @default(1)
+  partial       Boolean            @default(false)
+  quotaSnapshot Json?
+  error         String?
+  resultCount   Int                @default(0)
+  dailyDigestId String?
+  createdAt     DateTime           @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedQuery    SavedQuery?        @relation(fields: [savedQueryId], references: [id], onDelete: SetNull)
+  results       QueryRunResult[]
+  shareDrafts   ShareDraft[]
+  videoJobs     VideoJob[]
+  dailyDigest   DailyDigest?       @relation(fields: [dailyDigestId], references: [id], onDelete: SetNull)
+}
+
+model Repository {
+  id               String           @id @default(cuid())
+  githubId         String           @unique
+  owner            String
+  name             String
+  fullName         String           @unique
+  htmlUrl          String
+  description      String?
+  topics           Json
+  language         String?
+  defaultBranch    String?
+  totalStars       Int
+  fork             Boolean          @default(false)
+  archived         Boolean          @default(false)
+  createdAt        DateTime
+  pushedAt         DateTime?
+  metadataSyncedAt DateTime         @default(now())
+  starEvents       RepoStarEvent[]
+  queryResults     QueryRunResult[]
+}
+
+model RepoStarEvent {
+  id           String     @id @default(cuid())
+  repositoryId String
+  starredAt    DateTime
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([repositoryId, starredAt])
+}
+
+model QueryRunResult {
+  id            String     @id @default(cuid())
+  queryRunId    String
+  repositoryId  String
+  rank          Int
+  totalStars    Int
+  starGain      Int?
+  starsPerDay   Float?
+  matchedFields Json
+  queryRun      QueryRun   @relation(fields: [queryRunId], references: [id], onDelete: Cascade)
+  repository    Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([queryRunId, repositoryId])
+  @@unique([queryRunId, rank])
+}
+
+model ShareDraft {
+  id         String   @id @default(cuid())
+  userId     String
+  queryRunId String
+  channel    String
+  payload    Json
+  exportPath String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  queryRun   QueryRun @relation(fields: [queryRunId], references: [id], onDelete: Cascade)
+}
+
+model VideoJob {
+  id          String         @id @default(cuid())
+  userId      String
+  queryRunId  String
+  format      String
+  status      VideoJobStatus @default(pending)
+  scriptJson  Json
+  audioPath   String?
+  captionJson Json?
+  videoPath   String?
+  error       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  queryRun    QueryRun       @relation(fields: [queryRunId], references: [id], onDelete: Cascade)
+}
+
+model DailyDigest {
+  id         String            @id @default(cuid())
+  userId     String
+  digestDate DateTime
+  status     DailyDigestStatus @default(pending)
+  transport  String?
+  externalId String?
+  summaryJson Json?
+  sentAt     DateTime?
+  error      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  runs       QueryRun[]
+
+  @@unique([userId, digestDate], name: "userId_digestDate")
+}

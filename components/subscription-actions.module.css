@@ -1,0 +1,58 @@
+.root {
+  display: grid;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #2f77ff, #5aa3ff);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(61, 118, 243, 0.24);
+}
+
+.primaryButton:hover:not(:disabled),
+.secondaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.82);
+  color: rgba(37, 29, 22, 0.92);
+  border-color: rgba(205, 187, 166, 0.52);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+.error {
+  color: rgba(164, 47, 47, 0.92);
+  margin: 0;
+  font-size: 0.92rem;
+}
