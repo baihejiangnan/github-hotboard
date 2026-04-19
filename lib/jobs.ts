@@ -20,6 +20,10 @@ const QUEUE_NAMES = [
   "daily-digest.tick"
 ] as const;
 
+function logWorkerEvent(event: string, payload?: Record<string, unknown>) {
+  console.info("[worker]", event, payload ?? {});
+}
+
 async function createBoss() {
   const connectionString = process.env.DATABASE_URL;
 
@@ -102,15 +106,20 @@ async function handleScheduledDispatch() {
     take: 20
   });
 
+  logWorkerEvent("saved-query.dispatch.found", {
+    dueQueryCount: dueQueries.length
+  });
+
   for (const query of dueQueries) {
     try {
+      logWorkerEvent("saved-query.dispatch.start", { savedQueryId: query.id });
       const run = await executeSavedQueryRun(query.id, "scheduled");
 
       if (run?.status === "failed") {
         await triggerRetryIfNeeded(run.id);
       }
     } catch (error) {
-      console.error("[saved-query.dispatch]", error);
+      console.error("[saved-query.dispatch]", { savedQueryId: query.id, error });
 
       const latestRun = await db.queryRun.findFirst({
         where: {
@@ -138,7 +147,9 @@ export async function registerWorkers() {
       return;
     }
 
+    logWorkerEvent("query.run.start", { runId: data.runId });
     await runRankingWorkflow(data.runId);
+    logWorkerEvent("query.run.complete", { runId: data.runId });
   });
 
   await boss.work("saved-query.dispatch", async () => {
@@ -155,7 +166,9 @@ export async function registerWorkers() {
       return;
     }
 
+    logWorkerEvent("share.generate.start", data);
     await createShareDraftFromRun(data.runId, data.channel);
+    logWorkerEvent("share.generate.complete", data);
   });
 
   await boss.work("video.render", async ([job]) => {
@@ -164,10 +177,14 @@ export async function registerWorkers() {
       return;
     }
 
+    logWorkerEvent("video.render.start", { jobId: data.jobId });
     await processVideoJob(data.jobId);
+    logWorkerEvent("video.render.complete", { jobId: data.jobId });
   });
 
   await boss.work("daily-digest.tick", async () => {
+    logWorkerEvent("daily-digest.tick.start");
     await sendTodayDigest();
+    logWorkerEvent("daily-digest.tick.complete");
   });
 }

@@ -43,6 +43,12 @@ npm run dev
 npm run worker
 ```
 
+6. 做一次基线验证：
+
+```bash
+npm run verify
+```
+
 ## Windows 一键脚本
 - `setup-local.cmd`：复制 `.env`、安装依赖、生成 Prisma Client、执行数据库迁移
 - `run-web.cmd`：启动 Web 开发服务器
@@ -67,3 +73,4 @@ npm run worker
 - 如果 GitHub 搜索或 README 检索遇到配额不足，`query_runs.partial` 会被标记为 `true`
 - 发布能力当前是导出发布包，不直接调用公众号/小红书平台接口
 - 视频系统需要额外安装 Remotion 运行依赖，并确保本机具备可用的 Chromium / ffmpeg 环境
+- 调整主链路后，建议至少执行一次 `npm run verify`，把单元测试和生产构建一起跑完

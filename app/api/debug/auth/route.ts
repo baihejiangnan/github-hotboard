@@ -1,26 +1,26 @@
 import { NextResponse } from "next/server";
 
-function mask(value?: string) {
-  if (!value) return null;
-  if (value.length <= 8) return `${value[0] ?? ""}***`;
-  return `${value.slice(0, 4)}...${value.slice(-4)}`;
-}
+import { requireUser } from "@/lib/auth";
+import { buildAuthDebugPayload } from "@/lib/debug-auth";
 
 export async function GET() {
-  const nextAuthUrl = process.env.NEXTAUTH_URL || null;
-  const githubId = process.env.GITHUB_ID || "";
-  const githubSecret = process.env.GITHUB_SECRET || "";
-  const nextAuthSecret = process.env.NEXTAUTH_SECRET || "";
+  try {
+    await requireUser();
 
-  return NextResponse.json({
-    nextAuthUrl,
-    expectedCallbackUrl: nextAuthUrl ? `${nextAuthUrl}/api/auth/callback/github` : null,
-    hasNextAuthSecret: Boolean(nextAuthSecret),
-    nextAuthSecretLength: nextAuthSecret.length,
-    hasGitHubId: Boolean(githubId),
-    githubIdPreview: mask(githubId),
-    hasGitHubSecret: Boolean(githubSecret),
-    githubSecretLength: githubSecret.length
-  });
+    return NextResponse.json(
+      buildAuthDebugPayload({
+        nextAuthUrl: process.env.NEXTAUTH_URL,
+        githubId: process.env.GITHUB_ID,
+        githubSecret: process.env.GITHUB_SECRET,
+        nextAuthSecret: process.env.NEXTAUTH_SECRET
+      })
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Unable to inspect auth configuration."
+      },
+      { status: 401 }
+    );
+  }
 }
-
