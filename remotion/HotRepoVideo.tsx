@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Audio } from "@remotion/media";
 
 import type { CaptionSegment, VideoScript } from "@/lib/types";
@@ -16,6 +16,22 @@ function AbsoluteFill(props: { children?: ReactNode; style?: CSSProperties }) {
       {props.children}
     </div>
   );
+}
+
+function interpolate(
+  value: number,
+  inputRange: [number, number],
+  outputRange: [number, number]
+) {
+  const [inputStart, inputEnd] = inputRange;
+  const [outputStart, outputEnd] = outputRange;
+
+  if (inputEnd === inputStart) {
+    return outputStart;
+  }
+
+  const progress = Math.min(1, Math.max(0, (value - inputStart) / (inputEnd - inputStart)));
+  return outputStart + progress * (outputEnd - outputStart);
 }
 
 function findCurrentCaption(captions: CaptionSegment[], currentMs: number) {
