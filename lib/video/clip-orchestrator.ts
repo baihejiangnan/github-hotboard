@@ -1,9 +1,10 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { CogVideoXProvider } from "@/lib/ai/video-clip";
+import { createVideoClipProvider } from "@/lib/ai/video-clip";
 import { getExportRoot } from "@/lib/env";
 import type { VideoFormat, VideoScene } from "@/lib/types";
+import type { VideoClipProvider } from "@/lib/ai/types";
 
 const POLL_INTERVAL_MS = 10_000;
 const POLL_TIMEOUT_MS = 300_000;
@@ -21,7 +22,7 @@ async function downloadToLocal(url: string, filePath: string) {
 }
 
 async function pollUntilDone(
-  provider: CogVideoXProvider,
+  provider: VideoClipProvider,
   taskId: string,
 ): Promise<string | null> {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
@@ -38,7 +39,10 @@ export async function generateSceneClips(
   scenes: VideoScene[],
   format: VideoFormat,
 ): Promise<Map<number, string>> {
-  const provider = new CogVideoXProvider();
+  const provider = createVideoClipProvider();
+  if (!provider) {
+    return new Map<number, string>();
+  }
   const size = SIZE_MAP[format];
   const clipDir = path.resolve(getExportRoot(), "video-clip");
   const { mkdir } = await import("node:fs/promises");

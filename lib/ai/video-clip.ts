@@ -1,47 +1,148 @@
 import { z } from "zod";
 
-import { getZaiApiKey, getZaiBaseUrl } from "@/lib/env";
+import {
+  getArkApiKey,
+  getArkBaseUrl,
+  getArkVideoGenerationPath,
+  getArkVideoModel,
+  getArkVideoQueryPathTemplate,
+  getVideoClipProvider
+} from "@/lib/env";
 
 import type { VideoClipProvider } from "./types";
 
-const clipGenerationResponseSchema = z.object({
-  id: z.string().min(1)
-});
+const clipPollStatusSchema = z.union([
+  z.literal("PROCESSING"),
+  z.literal("PENDING"),
+  z.literal("RUNNING"),
+  z.literal("SUCCESS"),
+  z.literal("SUCCEEDED"),
+  z.literal("FAIL"),
+  z.literal("FAILED")
+]);
 
-const clipPollResponseSchema = z.object({
-  task_status: z.union([
-    z.literal("PROCESSING"),
-    z.literal("SUCCESS"),
-    z.literal("FAIL")
-  ]),
-  video_result: z.array(z.object({ url: z.string().url() })).optional()
-});
+function pickTaskId(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const direct =
+    record.id ?? record.task_id ?? record.taskId;
+
+  if (typeof direct === "string" && direct.trim()) {
+    return direct;
+  }
+
+  const nested = record.data;
+  if (nested && typeof nested === "object") {
+    return pickTaskId(nested);
+  }
+
+  return undefined;
+}
+
+function pickVideoUrl(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const directCandidates = [
+    record.video_url,
+    record.videoUrl,
+    record.url
+  ];
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === "string" && candidate.startsWith("http")) {
+      return candidate;
+    }
+  }
+
+  const videoResult = record.video_result;
+  if (Array.isArray(videoResult)) {
+    for (const item of videoResult) {
+      if (
+        item &&
+        typeof item === "object" &&
+        typeof (item as Record<string, unknown>).url === "string"
+      ) {
+        return (item as Record<string, string>).url;
+      }
+    }
+  }
+
+  const output = record.output;
+  if (Array.isArray(output)) {
+    for (const item of output) {
+      const url = pickVideoUrl(item);
+      if (url) {
+        return url;
+      }
+    }
+  }
+
+  if (record.data && typeof record.data === "object") {
+    return pickVideoUrl(record.data);
+  }
+
+  return undefined;
+}
 
 export function parseClipGenerationResponse(payload: unknown): { taskId: string } {
-  const parsed = clipGenerationResponseSchema.parse(payload);
+  const taskId = pickTaskId(payload);
 
-  return { taskId: parsed.id };
+  if (!taskId) {
+    throw new Error("Video clip generation payload did not contain a task id.");
+  }
+
+  return { taskId };
 }
 
 export function parseClipPollResponse(payload: unknown): {
   status: "processing" | "success" | "fail";
   videoUrl?: string;
 } {
-  const parsed = clipPollResponseSchema.parse(payload);
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Video clip poll payload must be an object.");
+  }
+
+  const record = payload as Record<string, unknown>;
+  const rawStatus =
+    record.task_status ?? record.status ?? record.state ?? (record.data && typeof record.data === "object"
+      ? (record.data as Record<string, unknown>).task_status ??
+        (record.data as Record<string, unknown>).status ??
+        (record.data as Record<string, unknown>).state
+      : undefined);
+
+  const parsedStatus = clipPollStatusSchema.parse(rawStatus);
+  const normalized =
+    parsedStatus === "SUCCESS" || parsedStatus === "SUCCEEDED"
+      ? "success"
+      : parsedStatus === "FAIL" || parsedStatus === "FAILED"
+        ? "fail"
+        : "processing";
 
   return {
-    status: parsed.task_status.toLowerCase() as "processing" | "success" | "fail",
-    videoUrl: parsed.video_result?.[0]?.url
+    status: normalized,
+    videoUrl: pickVideoUrl(payload)
   };
 }
 
-export class CogVideoXProvider implements VideoClipProvider {
+function joinArkPath(pathname: string) {
+  return `${getArkBaseUrl()}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+}
+
+export class ArkVideoClipProvider implements VideoClipProvider {
   private readonly apiKey: string;
-  private readonly baseUrl: string;
+  private readonly generationUrl: string;
+  private readonly queryPathTemplate: string;
 
   constructor() {
-    this.apiKey = getZaiApiKey();
-    this.baseUrl = getZaiBaseUrl();
+    this.apiKey = getArkApiKey();
+    this.generationUrl = joinArkPath(getArkVideoGenerationPath());
+    this.queryPathTemplate = getArkVideoQueryPathTemplate();
   }
 
   async generateClip(
@@ -49,23 +150,22 @@ export class CogVideoXProvider implements VideoClipProvider {
     durationSec: number,
     size: string
   ): Promise<{ taskId: string }> {
-    const res = await fetch(`${this.baseUrl}/videos/generations`, {
+    const res = await fetch(this.generationUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "cogvideox-3",
+        model: getArkVideoModel(),
         prompt,
         duration: Math.min(Math.max(durationSec, 4), 10),
-        size,
-        quality: "speed"
+        size
       })
     });
 
     if (!res.ok) {
-      throw new Error(`CogVideoX generation failed: ${res.status}`);
+      throw new Error(`Ark video generation failed: ${res.status}`);
     }
 
     return parseClipGenerationResponse(await res.json());
@@ -77,14 +177,27 @@ export class CogVideoXProvider implements VideoClipProvider {
     status: "processing" | "success" | "fail";
     videoUrl?: string;
   }> {
-    const res = await fetch(`${this.baseUrl}/async-result/${taskId}`, {
-      headers: { Authorization: `Bearer ${this.apiKey}` }
+    const pollUrl = joinArkPath(
+      this.queryPathTemplate.replace("{taskId}", encodeURIComponent(taskId))
+    );
+    const res = await fetch(pollUrl, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`
+      }
     });
 
     if (!res.ok) {
-      throw new Error(`CogVideoX poll failed: ${res.status}`);
+      throw new Error(`Ark video poll failed: ${res.status}`);
     }
 
     return parseClipPollResponse(await res.json());
   }
+}
+
+export function createVideoClipProvider(): VideoClipProvider | null {
+  if (getVideoClipProvider() === "none") {
+    return null;
+  }
+
+  return new ArkVideoClipProvider();
 }

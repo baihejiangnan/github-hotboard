@@ -48,12 +48,12 @@ export function getTextProvider(): "openai" | "zai" | "ark" {
   return (process.env.AI_TEXT_PROVIDER as "openai" | "zai" | "ark") || "ark";
 }
 
-export function getTtsProvider(): "openai" | "zai" | "none" {
-  return (process.env.AI_TTS_PROVIDER as "openai" | "zai" | "none") || "none";
+export function getTtsProvider(): "openai" | "zai" | "ark" | "none" {
+  return (process.env.AI_TTS_PROVIDER as "openai" | "zai" | "ark" | "none") || "none";
 }
 
-export function getVideoClipProvider(): "zai" | "none" {
-  return (process.env.AI_VIDEO_CLIP_PROVIDER as "zai" | "none") || "none";
+export function getVideoClipProvider(): "ark" | "none" {
+  return (process.env.AI_VIDEO_CLIP_PROVIDER as "ark" | "none") || "ark";
 }
 
 export function getZaiChatModel() {
@@ -66,6 +66,26 @@ export function getArkTextModel() {
 
 export function getArkVisionModel() {
   return process.env.ARK_VISION_MODEL || getArkTextModel();
+}
+
+export function getArkTtsModel() {
+  return process.env.ARK_TTS_MODEL || "doubao-tts";
+}
+
+export function getArkTtsVoice() {
+  return process.env.ARK_TTS_VOICE || "alloy";
+}
+
+export function getArkVideoModel() {
+  return process.env.ARK_VIDEO_MODEL || "doubao-seedance-1-5-pro";
+}
+
+export function getArkVideoGenerationPath() {
+  return process.env.ARK_VIDEO_GENERATION_PATH || "/contents/generations/tasks";
+}
+
+export function getArkVideoQueryPathTemplate() {
+  return process.env.ARK_VIDEO_QUERY_PATH_TEMPLATE || "/contents/generations/tasks/{taskId}";
 }
 
 export function getZaiTtsVoice() {

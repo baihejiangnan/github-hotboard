@@ -529,7 +529,7 @@ export async function processVideoJob(jobId: string) {
   let fallbackWarning: string | null = null;
 
   try {
-    if (getVideoClipProvider() === "zai") {
+    if (getVideoClipProvider() !== "none") {
       try {
         logWorkflowStage("processVideoJob", "clip_generation", { jobId });
         const { generateSceneClips } = await import("@/lib/video/clip-orchestrator");

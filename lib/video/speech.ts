@@ -1,6 +1,11 @@
 import OpenAI from "openai";
 
+import { createArkClient } from "@/lib/ai/ark";
 import {
+  getArkApiKey,
+  getArkBaseUrl,
+  getArkTtsModel,
+  getArkTtsVoice,
   getTtsModel,
   getTtsProvider,
   getZaiApiKey,
@@ -55,9 +60,36 @@ export class ZaiTtsProvider implements SpeechProvider {
   }
 }
 
+export class ArkTtsProvider implements SpeechProvider {
+  private readonly client: OpenAI;
+
+  constructor(apiKey: string, baseUrl: string) {
+    this.client = createArkClient();
+    void apiKey;
+    void baseUrl;
+  }
+
+  async synthesize(jobId: string, text: string) {
+    const result = await this.client.audio.speech.create({
+      model: getArkTtsModel(),
+      voice: getArkTtsVoice() as "alloy",
+      input: text
+    });
+
+    const buffer = Buffer.from(await result.arrayBuffer());
+    const audioPath = await writeTextArtifact("audio", `${jobId}.mp3`, buffer);
+
+    return { audioPath };
+  }
+}
+
 export function createSpeechProvider(): SpeechProvider | null {
   if (getTtsProvider() === "none") {
     return null;
+  }
+
+  if (getTtsProvider() === "ark") {
+    return new ArkTtsProvider(getArkApiKey(), getArkBaseUrl());
   }
 
   if (getTtsProvider() === "zai") {
