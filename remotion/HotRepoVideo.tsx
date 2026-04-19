@@ -1,4 +1,5 @@
-import { Audio, AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import { Audio } from "@remotion/media";
 
 import type { CaptionSegment, VideoScript } from "@/lib/types";
 
@@ -104,4 +105,3 @@ export function HotRepoVideo({
     </AbsoluteFill>
   );
 }
-
