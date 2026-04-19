@@ -22,8 +22,7 @@ async function copyAssetForRemotion(
 
 async function prepareRenderAssets(
   jobId: string,
-  script: VideoScript,
-  audioPath: string | null
+  script: VideoScript
 ) {
   const publicAssetDir = path.resolve(process.cwd(), "public", "generated-assets", jobId);
   const routePrefix = `/generated-assets/${jobId}`;
@@ -54,18 +53,8 @@ async function prepareRenderAssets(
     )
   };
 
-  const preparedAudioSrc = audioPath
-    ? await copyAssetForRemotion(
-        publicAssetDir,
-        routePrefix,
-        audioPath,
-        `audio${path.extname(audioPath) || ".mp3"}`
-      )
-    : null;
-
   return {
     preparedScript,
-    preparedAudioSrc,
     publicAssetDir
   };
 }
@@ -82,18 +71,24 @@ export async function renderVideoJob(
     import("@remotion/renderer")
   ]);
 
-  const { preparedScript, preparedAudioSrc, publicAssetDir } =
-    await prepareRenderAssets(jobId, script, audioPath);
+  void audioPath;
+
+  const { preparedScript, publicAssetDir } = await prepareRenderAssets(jobId, script);
   const remotionEntry = path.resolve(process.cwd(), "remotion/index.ts");
+  const publicDir = path.resolve(process.cwd(), "public");
   try {
-    const serveUrl = await bundle(remotionEntry);
+    const serveUrl = await bundle({
+      entryPoint: remotionEntry,
+      publicDir,
+      enableCaching: false
+    });
     const compositionId = compositionByFormat[format];
     const composition = await selectComposition({
       serveUrl,
       id: compositionId,
       inputProps: {
         script: preparedScript,
-        audioSrc: preparedAudioSrc ?? "",
+        audioSrc: "",
         captions
       }
     });
@@ -107,7 +102,7 @@ export async function renderVideoJob(
       outputLocation,
       inputProps: {
         script: preparedScript,
-        audioSrc: preparedAudioSrc ?? "",
+        audioSrc: "",
         captions
       }
     });

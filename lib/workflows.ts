@@ -495,9 +495,16 @@ export async function createVideoJob(
 
 export async function processVideoJob(jobId: string) {
   logWorkflowStage("processVideoJob", "start", { jobId });
-  const [{ createSpeechProvider }, { renderVideoJob }] = await Promise.all([
+  const [
+    { createSpeechProvider },
+    { renderVideoJob },
+    { exportCaptionArtifact },
+    { muxAudioTrack }
+  ] = await Promise.all([
     import("@/lib/video/speech"),
-    import("@/lib/video/remotion")
+    import("@/lib/video/remotion"),
+    import("@/lib/video/captions"),
+    import("@/lib/video/ffmpeg")
   ]);
 
   const job = await db.videoJob.findUnique({
@@ -549,7 +556,8 @@ export async function processVideoJob(jobId: string) {
       const provider = createSpeechProvider();
 
       if (!provider) {
-        fallbackWarning = "speech_synthesis_skipped: no_tts_provider_configured | rendered_without_audio";
+        fallbackWarning =
+          "speech_synthesis_skipped: no_tts_provider_configured | rendered_without_audio";
         return null;
       }
 
@@ -574,14 +582,15 @@ export async function processVideoJob(jobId: string) {
     })();
 
     const captions = script.captionSegments;
-    const videoPath = await (async () => {
+    const captionPath = await exportCaptionArtifact(jobId, captions);
+    const renderedVideoPath = await (async () => {
       try {
         logWorkflowStage("processVideoJob", "video_render", { jobId });
         return await renderVideoJob(
           job.id,
           job.format as VideoFormat,
           script,
-          audioPath,
+          null,
           captions
         );
       } catch (error) {
@@ -598,23 +607,44 @@ export async function processVideoJob(jobId: string) {
       }
     })();
 
+    const finalVideoPath = await (async () => {
+      if (!audioPath) {
+        return renderedVideoPath;
+      }
+
+      try {
+        logWorkflowStage("processVideoJob", "audio_mux", { jobId });
+        return await muxAudioTrack(renderedVideoPath, audioPath);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "unknown audio mux failure";
+        fallbackWarning = `audio_mux_failed: ${message} | rendered_without_audio`;
+        console.warn("[workflow][processVideoJob][audio_mux_failed]", {
+          jobId,
+          error
+        });
+        return renderedVideoPath;
+      }
+    })();
+
     await db.videoJob.update({
       where: { id: jobId },
       data: {
         status: VideoJobStatus.completed,
         audioPath,
         captionJson: serializeCaptionSegments(captions),
-        videoPath,
+        videoPath: finalVideoPath,
         error: fallbackWarning
       }
     });
 
     logWorkflowStage("processVideoJob", "complete", {
       jobId,
-      videoPath
+      videoPath: finalVideoPath,
+      captionPath
     });
 
-    return videoPath;
+    return finalVideoPath;
   } catch (error) {
     console.error("[workflow][processVideoJob]", { jobId, error });
     throw error;

@@ -17,7 +17,7 @@ type Stage =
   | "create_video_job"
   | "process_video_job";
 
-type TtsProviderName = "openai" | "zai" | "none";
+type TtsProviderName = "piper" | "openai" | "zai" | "none";
 
 function fail(stage: Stage, message: string): never {
   throw new Error(`${stage}: ${message}`);
@@ -54,7 +54,10 @@ function buildTtsProviderCandidates(): TtsProviderName[] {
     .map((provider) => provider.trim().toLowerCase())
     .filter(
       (provider): provider is TtsProviderName =>
-        provider === "openai" || provider === "zai" || provider === "none"
+        provider === "piper" ||
+        provider === "openai" ||
+        provider === "zai" ||
+        provider === "none"
     );
 
   if (explicitProviders && explicitProviders.length > 0) {
@@ -63,15 +66,23 @@ function buildTtsProviderCandidates(): TtsProviderName[] {
 
   const preferredProviders = [
     process.env.AI_TTS_PROVIDER?.toLowerCase(),
+    "piper",
     "none",
     "openai",
     "zai"
   ].filter(
     (provider): provider is TtsProviderName =>
-      provider === "openai" || provider === "zai" || provider === "none"
+      provider === "piper" ||
+      provider === "openai" ||
+      provider === "zai" ||
+      provider === "none"
   );
 
   return [...new Set(preferredProviders)].filter((provider) => {
+    if (provider === "piper") {
+      return true;
+    }
+
     if (provider === "none") {
       return true;
     }
@@ -155,7 +166,7 @@ async function main() {
   if (providerCandidates.length < 1) {
     fail(
       "process_video_job",
-      "没有可用的 TTS provider，请配置 OPENAI_API_KEY、ZAI_API_KEY，或将 AI_TTS_PROVIDER 设为 none。"
+      "没有可用的 TTS provider，请先运行 `npm run setup:piper`，或配置 OPENAI_API_KEY / ZAI_API_KEY，或将 AI_TTS_PROVIDER 设为 none。"
     );
   }
 
@@ -195,8 +206,8 @@ async function main() {
     where: { id: job.id }
   });
 
-  if (!finalJob || finalJob.status !== "completed" || !finalJob.audioPath || !finalJob.videoPath) {
-    fail("process_video_job", "视频任务没有完成，或缺少音频/视频产物。");
+  if (!finalJob || finalJob.status !== "completed" || !finalJob.videoPath) {
+    fail("process_video_job", "视频任务没有完成，或缺少最终视频产物。");
   }
 
   console.log(
@@ -213,7 +224,8 @@ async function main() {
         ttsProvider: selectedTtsProvider,
         audioPath: finalJob.audioPath,
         videoPath,
-        status: finalJob.status
+        status: finalJob.status,
+        warning: finalJob.error
       },
       null,
       2

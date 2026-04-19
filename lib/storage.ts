@@ -7,7 +7,11 @@ async function ensureDir(dir: string) {
   await mkdir(dir, { recursive: true });
 }
 
-export async function writeTextArtifact(kind: "share" | "video" | "audio", fileName: string, content: string | Buffer) {
+export async function writeTextArtifact(
+  kind: "share" | "video" | "audio" | "caption",
+  fileName: string,
+  content: string | Buffer
+) {
   const root = path.resolve(getExportRoot(), kind);
   await ensureDir(root);
 
@@ -15,4 +19,3 @@ export async function writeTextArtifact(kind: "share" | "video" | "audio", fileN
   await writeFile(targetPath, content);
   return targetPath;
 }
-

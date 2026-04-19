@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => {
     },
     createSpeechProvider: vi.fn(),
     renderVideoJob: vi.fn(),
-    generateSceneClips: vi.fn()
+    generateSceneClips: vi.fn(),
+    muxAudioTrack: vi.fn()
   };
 });
 
@@ -29,6 +30,10 @@ vi.mock("@/lib/video/remotion", () => ({
   renderVideoJob: mocks.renderVideoJob
 }));
 
+vi.mock("@/lib/video/ffmpeg", () => ({
+  muxAudioTrack: mocks.muxAudioTrack
+}));
+
 vi.mock("@/lib/video/clip-orchestrator", () => ({
   generateSceneClips: mocks.generateSceneClips
 }));
@@ -41,6 +46,7 @@ describe("processVideoJob", () => {
     mocks.createSpeechProvider.mockReset();
     mocks.renderVideoJob.mockReset();
     mocks.generateSceneClips.mockReset();
+    mocks.muxAudioTrack.mockReset();
     process.env.AI_VIDEO_CLIP_PROVIDER = "none";
   });
 
@@ -103,6 +109,48 @@ describe("processVideoJob", () => {
           audioPath: null,
           videoPath: "D:/exports/video/job-2.mp4",
           error: "speech_synthesis_failed: tts broke | rendered_without_audio"
+        })
+      })
+    );
+  });
+
+  it("keeps the silent render when ffmpeg audio mux fails", async () => {
+    mocks.prisma.videoJob.findUnique.mockResolvedValue({
+      id: "job-3",
+      format: "vertical_60",
+      status: "pending",
+      videoPath: null,
+      scriptJson: {
+        format: "vertical_60",
+        scenes: [{ title: "榜单", body: "正文", accent: "#ff6b35" }],
+        narrationSegments: [{ startMs: 0, endMs: 1000, text: "开场" }],
+        captionSegments: [{ startMs: 0, endMs: 1000, text: "开场" }],
+        cta: "查看完整榜单"
+      }
+    });
+    mocks.createSpeechProvider.mockReturnValue({
+      synthesize: vi.fn().mockResolvedValue({
+        audioPath: "D:/exports/audio/job-3.wav"
+      })
+    });
+    mocks.renderVideoJob.mockResolvedValue("D:/exports/video/job-3.mp4");
+    mocks.muxAudioTrack.mockRejectedValue(new Error("ffmpeg broke"));
+
+    const { processVideoJob } = await import("@/lib/workflows");
+    const result = await processVideoJob("job-3");
+
+    expect(result).toBe("D:/exports/video/job-3.mp4");
+    expect(mocks.muxAudioTrack).toHaveBeenCalledWith(
+      "D:/exports/video/job-3.mp4",
+      "D:/exports/audio/job-3.wav"
+    );
+    expect(mocks.prisma.videoJob.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "completed",
+          audioPath: "D:/exports/audio/job-3.wav",
+          videoPath: "D:/exports/video/job-3.mp4",
+          error: "audio_mux_failed: ffmpeg broke | rendered_without_audio"
         })
       })
     );

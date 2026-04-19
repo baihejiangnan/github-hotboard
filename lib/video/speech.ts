@@ -13,6 +13,7 @@ import {
   getZaiTtsVoice
 } from "@/lib/env";
 import { writeTextArtifact } from "@/lib/storage";
+import { synthesizeWithPiper } from "@/lib/video/piper";
 
 export interface SpeechProvider {
   synthesize(jobId: string, text: string): Promise<{ audioPath: string }>;
@@ -83,9 +84,22 @@ export class ArkTtsProvider implements SpeechProvider {
   }
 }
 
+export class PiperTtsProvider implements SpeechProvider {
+  async synthesize(jobId: string, text: string) {
+    const audioPath = await writeTextArtifact("audio", `${jobId}.wav`, "");
+    await synthesizeWithPiper(text, audioPath);
+
+    return { audioPath };
+  }
+}
+
 export function createSpeechProvider(): SpeechProvider | null {
   if (getTtsProvider() === "none") {
     return null;
+  }
+
+  if (getTtsProvider() === "piper") {
+    return new PiperTtsProvider();
   }
 
   if (getTtsProvider() === "ark") {

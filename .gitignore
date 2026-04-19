@@ -10,3 +10,7 @@ data
 *.log
 prisma/dev.db
 tsconfig.tsbuildinfo
+tools/piper/runtime/
+tools/piper/downloads/
+models/piper/*.onnx
+models/piper/*.onnx.json
