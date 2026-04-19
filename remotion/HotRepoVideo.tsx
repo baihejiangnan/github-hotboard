@@ -1,7 +1,22 @@
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import type { CSSProperties, ReactNode } from "react";
+import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { Audio } from "@remotion/media";
 
 import type { CaptionSegment, VideoScript } from "@/lib/types";
+
+function AbsoluteFill(props: { children?: ReactNode; style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        ...props.style
+      }}
+    >
+      {props.children}
+    </div>
+  );
+}
 
 function findCurrentCaption(captions: CaptionSegment[], currentMs: number) {
   return (
