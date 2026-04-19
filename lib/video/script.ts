@@ -52,8 +52,7 @@ export function buildVideoScript(format: VideoFormat, input: QueryInput, repos: 
     scenes.push({
       title: repo.fullName,
       body: repo.description ?? "值得关注的开源项目",
-      accent: "#0057ff",
-      repoName: repo.fullName
+      accent: "#0057ff"
     });
     cursor += config.repoMs;
   }
@@ -78,4 +77,3 @@ export function buildVideoScript(format: VideoFormat, input: QueryInput, repos: 
     cta: "打开完整榜单"
   };
 }
-
