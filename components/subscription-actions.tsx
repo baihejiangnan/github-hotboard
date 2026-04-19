@@ -15,7 +15,7 @@ type SubscriptionActionsProps = {
 
 async function readJson(response: Response) {
   if (!response.ok) {
-    throw new Error(await readApiError(response));
+    throw new Error(await readApiError(response, "Request failed"));
   }
 
   return response.json();

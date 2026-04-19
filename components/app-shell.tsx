@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { getServerSession } from "next-auth";
 
 import { GitHubSignInButton } from "@/components/github-sign-in-button";
@@ -33,7 +34,7 @@ export async function AppShell({
             {links.map((link) => (
               <Link
                 key={link.href}
-                href={link.href}
+                href={link.href as Route}
                 className={`nav-link ${pathname.startsWith(link.href) ? "is-active" : ""}`}
               >
                 <span>{link.label}</span>
