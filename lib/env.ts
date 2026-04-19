@@ -16,6 +16,10 @@ export function shouldInlineRender() {
   return process.env.VIDEO_INLINE_RENDER === "true";
 }
 
+export function getOpenAIChatModel() {
+  return process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
+}
+
 export function getTtsModel() {
   return process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
 }
@@ -30,8 +34,18 @@ export function getZaiBaseUrl() {
   return process.env.ZAI_BASE_URL || "https://api.z.ai/api/paas/v4";
 }
 
-export function getTextProvider(): "openai" | "zai" {
-  return (process.env.AI_TEXT_PROVIDER as "openai" | "zai") || "zai";
+export function getArkApiKey() {
+  const key = process.env.ARK_API_KEY;
+  if (!key) throw new Error("Missing ARK_API_KEY");
+  return key;
+}
+
+export function getArkBaseUrl() {
+  return process.env.ARK_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3";
+}
+
+export function getTextProvider(): "openai" | "zai" | "ark" {
+  return (process.env.AI_TEXT_PROVIDER as "openai" | "zai" | "ark") || "zai";
 }
 
 export function getTtsProvider(): "openai" | "zai" {
@@ -46,7 +60,14 @@ export function getZaiChatModel() {
   return process.env.ZAI_CHAT_MODEL || "glm-4.7";
 }
 
+export function getArkTextModel() {
+  return process.env.ARK_TEXT_MODEL || "doubao-seed-2-0-mini-260215";
+}
+
+export function getArkVisionModel() {
+  return process.env.ARK_VISION_MODEL || getArkTextModel();
+}
+
 export function getZaiTtsVoice() {
   return process.env.ZAI_TTS_VOICE || "tongtong";
 }
-

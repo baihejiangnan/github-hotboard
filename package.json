@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "ark:vision": "node --env-file=.env --import tsx scripts/ark-vision-demo.ts",
     "worker": "node --env-file=.env --import tsx scripts/worker.ts",
     "smoke:local": "node --env-file=.env --import tsx scripts/smoke-local.ts",
     "remotion:studio": "remotion studio remotion/index.ts"

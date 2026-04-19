@@ -89,7 +89,11 @@ export async function buildVideoScript(
   input: QueryInput,
   repos: RankedRepository[]
 ): Promise<VideoScript> {
-  if (getTextProvider() === "zai" || getTextProvider() === "openai") {
+  if (
+    getTextProvider() === "zai" ||
+    getTextProvider() === "openai" ||
+    getTextProvider() === "ark"
+  ) {
     try {
       return await buildVideoScriptWithAI(format, input, repos);
     } catch {

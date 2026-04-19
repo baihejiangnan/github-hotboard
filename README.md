@@ -71,7 +71,10 @@ npm run smoke:local
 - `NEXTAUTH_URL` / `NEXTAUTH_SECRET`
 - `GITHUB_ID` / `GITHUB_SECRET`：GitHub OAuth App
 - `OPENAI_API_KEY`：启用语音配音
+- `OPENAI_CHAT_MODEL`：OpenAI 文案模型
 - `ZAI_API_KEY`：启用智谱文案/视频/TTS 能力
+- `ARK_API_KEY` / `ARK_BASE_URL`：启用火山方舟 / 豆包 Responses API
+- `ARK_TEXT_MODEL` / `ARK_VISION_MODEL`：切换 Ark 文本与图文模型
 - `EXPORT_ROOT`：本地导出目录
 - `VIDEO_INLINE_RENDER`：设为 `true` 时，在 API 请求里同步渲染视频
 
@@ -83,3 +86,5 @@ npm run smoke:local
 - 调整主链路后，建议至少执行一次 `npm run verify`，把单元测试和生产构建一起跑完
 - `npm run smoke:local` 会真实调用 GitHub、文案模型、视频片段、TTS 与 Remotion 渲染；运行前需要本地已经存在一个完成 GitHub 登录的用户
 - 如果 `OPENAI_API_KEY` 和 `ZAI_API_KEY` 都存在，`smoke:local` 会按优先顺序尝试可用的 TTS provider；如果外部配额不足，会直接在终端输出对应阶段错误
+- 如果你要切到火山方舟文本模型，把 `AI_TEXT_PROVIDER` 设为 `ark`，并在 `.env` 里配置 `ARK_API_KEY` 与 `ARK_TEXT_MODEL`
+- 如果你要直接跑图文输入示例，可以执行 `npm run ark:vision -- "https://ark-project.tos-cn-beijing.volces.com/doc_image/ark_demo_img_1.png" "你看见了什么？"`，模型默认读取 `ARK_VISION_MODEL`

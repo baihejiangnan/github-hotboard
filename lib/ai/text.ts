@@ -1,5 +1,10 @@
-import { getTextProvider, getZaiChatModel } from "@/lib/env";
+import {
+  getOpenAIChatModel,
+  getTextProvider,
+  getZaiChatModel
+} from "@/lib/env";
 
+import { generateArkText } from "./ark";
 import { createChatClient } from "./client";
 import type { TextGenerationProvider } from "./types";
 
@@ -23,7 +28,7 @@ class OpenAITextProvider implements TextGenerationProvider {
   async generate(systemPrompt: string, userPrompt: string): Promise<string> {
     const client = createChatClient("openai");
     const res = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: getOpenAIChatModel(),
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -35,8 +40,22 @@ class OpenAITextProvider implements TextGenerationProvider {
   }
 }
 
+class ArkTextProvider implements TextGenerationProvider {
+  async generate(systemPrompt: string, userPrompt: string): Promise<string> {
+    return generateArkText(systemPrompt, userPrompt);
+  }
+}
+
 export function createTextProvider(): TextGenerationProvider {
-  return getTextProvider() === "zai"
-    ? new ZaiTextProvider()
-    : new OpenAITextProvider();
+  const provider = getTextProvider();
+
+  if (provider === "zai") {
+    return new ZaiTextProvider();
+  }
+
+  if (provider === "ark") {
+    return new ArkTextProvider();
+  }
+
+  return new OpenAITextProvider();
 }

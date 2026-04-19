@@ -64,7 +64,11 @@ export async function buildShareDraft(
   input: QueryInput,
   repos: RankedRepository[]
 ): Promise<ShareDraftPayload> {
-  if (getTextProvider() !== "zai" && getTextProvider() !== "openai") {
+  if (
+    getTextProvider() !== "zai" &&
+    getTextProvider() !== "openai" &&
+    getTextProvider() !== "ark"
+  ) {
     return buildShareDraftTemplate(channel, runId, input, repos);
   }
   try {
