@@ -9,7 +9,8 @@ const links = [
   { href: "/explore", label: "Explore" },
   { href: "/queries", label: "My Queries" },
   { href: "/share", label: "Share Studio" },
-  { href: "/videos", label: "Video Studio" }
+  { href: "/videos", label: "Video Studio" },
+  { href: "/settings", label: "Settings" }
 ];
 
 export async function AppShell({

@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { createJuheVideoProvider, generateJuheVideoClip } from "@/lib/ai/juhe-video";
 import { createVideoClipProvider } from "@/lib/ai/video-clip";
 import { getExportRoot } from "@/lib/env";
 import type { VideoFormat, VideoScene } from "@/lib/types";
@@ -72,4 +73,25 @@ export async function generateSceneClips(
   }
 
   return clipMap;
+}
+
+export async function generatePremiumBackgroundClip(
+  script: { scenes: VideoScene[]; cta: string },
+  format: VideoFormat,
+  apiKey: string,
+): Promise<string | null> {
+  const size = SIZE_MAP[format];
+  const sceneDescriptions = script.scenes
+    .map((s, i) => `场景${i + 1}：${s.title} - ${s.body}`)
+    .join("；");
+  const prompt = `GitHub开源项目推荐视频背景，${sceneDescriptions}。${script.cta}。科技感，深色背景，专业短视频风格。`;
+
+  const duration = format === "vertical_60" ? 10 : 15;
+
+  try {
+    return await generateJuheVideoClip(prompt, duration, size, apiKey);
+  } catch (error) {
+    console.warn("[clip-orchestrator][generatePremiumBackgroundClip]", { error });
+    return null;
+  }
 }

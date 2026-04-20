@@ -4,6 +4,7 @@ import GitHubProvider from "next-auth/providers/github";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/membership";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -37,6 +38,16 @@ export const authOptions: NextAuthOptions = {
         session.user.id = user.id;
       }
       return session;
+    },
+    async signIn({ user }) {
+      if (user.email && isAdmin(user.email)) {
+        const db = prisma as any;
+        await db.user.update({
+          where: { id: user.id },
+          data: { membershipTier: "god" }
+        });
+      }
+      return true;
     }
   },
   session: {

@@ -922,6 +922,32 @@
   box-shadow: 0 8px 16px rgba(232, 121, 90, 0.2);
 }
 
+.mediaPreview {
+  display: grid;
+  gap: 8px;
+}
+
+.mediaLabel {
+  font-size: 0.86rem;
+  color: rgba(72, 54, 39, 0.62);
+}
+
+.exportSection {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(212, 196, 177, 0.36);
+}
+
+.exportRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
 @media (max-width: 1240px) {
   .analyticsSummaryGrid,
   .analyticsGrid {

@@ -7,6 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum MembershipTier {
+  free
+  plus
+  god
+}
+
+enum GenerationMode {
+  local
+  premium
+}
+
 enum QueryRunStatus {
   pending
   running
@@ -35,20 +46,26 @@ enum DailyDigestStatus {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  name          String?
-  email         String?       @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  savedQueries  SavedQuery[]
-  queryRuns     QueryRun[]
-  shareDrafts   ShareDraft[]
-  videoJobs     VideoJob[]
-  dailyDigests  DailyDigest[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                     String              @id @default(cuid())
+  name                   String?
+  email                  String?             @unique
+  emailVerified          DateTime?
+  image                  String?
+  membershipTier         MembershipTier      @default(free)
+  membershipActivatedAt  DateTime?
+  membershipExpiresAt    DateTime?
+  accounts               Account[]
+  sessions               Session[]
+  savedQueries           SavedQuery[]
+  queryRuns              QueryRun[]
+  shareDrafts            ShareDraft[]
+  videoJobs              VideoJob[]
+  dailyDigests           DailyDigest[]
+  userSettings           UserSettings?
+  userApiCredentials     UserApiCredential[]
+  redeemedMembershipCodes MembershipCode[]   @relation("RedeemedBy")
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 }
 
 model Account {
@@ -83,6 +100,44 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model UserSettings {
+  id                   String         @id @default(cuid())
+  userId               String         @unique
+  videoMode            GenerationMode @default(local)
+  videoProvider        String         @default("local_template")
+  speechProvider       String         @default("piper")
+  defaultVideoFormat   String         @default("vertical_60")
+  promptTargetPlatform String         @default("generic")
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  user                 User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserApiCredential {
+  id               String    @id @default(cuid())
+  userId           String
+  provider         String
+  encryptedApiKey  String
+  maskedPreview    String
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+model MembershipCode {
+  codeHash            String     @unique
+  codePreview         String
+  durationDays        Int
+  expiresAt           DateTime
+  redeemedByUserId    String?
+  redeemedAt          DateTime?
+  disabledAt          DateTime?
+  createdByAdminEmail String
+  createdAt           DateTime   @default(now())
+  redeemedBy          User?      @relation("RedeemedBy", fields: [redeemedByUserId], references: [id], onDelete: SetNull)
 }
 
 model SavedQuery {
@@ -195,20 +250,23 @@ model ShareDraft {
 }
 
 model VideoJob {
-  id          String         @id @default(cuid())
-  userId      String
-  queryRunId  String
-  format      String
-  status      VideoJobStatus @default(pending)
-  scriptJson  Json
-  audioPath   String?
-  captionJson Json?
-  videoPath   String?
-  error       String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  queryRun    QueryRun       @relation(fields: [queryRunId], references: [id], onDelete: Cascade)
+  id              String         @id @default(cuid())
+  userId          String
+  queryRunId      String
+  format          String
+  status          VideoJobStatus @default(pending)
+  scriptJson      Json
+  audioPath       String?
+  captionJson     Json?
+  videoPath       String?
+  error           String?
+  generationMode  GenerationMode?
+  videoProvider   String?
+  speechProvider  String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  queryRun        QueryRun       @relation(fields: [queryRunId], references: [id], onDelete: Cascade)
 }
 
 model DailyDigest {

@@ -4,7 +4,7 @@ import styles from "@/app/queries/queries.module.css";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 
 type DashboardPageProps = {
-  active: "explore" | "queries" | "share" | "videos";
+  active: "explore" | "queries" | "share" | "videos" | "settings";
   userName?: string | null;
   eyebrow: string;
   title: string;

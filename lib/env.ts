@@ -176,3 +176,31 @@ export function getPiperVoiceConfigUrl() {
     `https://huggingface.co/rhasspy/piper-voices/resolve/main/zh/zh_CN/huayan/medium/${getPiperVoiceName()}.onnx.json?download=true`
   );
 }
+
+export function getUserCredentialEncryptionKey(): string {
+  return process.env.USER_CREDENTIAL_ENCRYPTION_KEY || "";
+}
+
+export function getAdminEmails(): string[] {
+  const raw = process.env.ADMIN_EMAILS || "";
+  return raw
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function getJuheVideoApiKey(): string {
+  return process.env.JUHE_VIDEO_API_KEY || "";
+}
+
+export function getJuheTtsApiKey(): string {
+  return process.env.JUHE_TTS_API_KEY || "";
+}
+
+export function getDefaultVideoProvider(): string {
+  return process.env.DEFAULT_VIDEO_PROVIDER || "local_template";
+}
+
+export function getDefaultSpeechProvider(): string {
+  return process.env.DEFAULT_SPEECH_PROVIDER || "piper";
+}

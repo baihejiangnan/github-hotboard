@@ -2,8 +2,11 @@ import { Prisma, QueryRunStatus, VideoJobStatus } from "@prisma/client";
 import { max } from "date-fns";
 
 import { isQuotaOrBalanceError } from "@/lib/ai/errors";
+import { generatePremiumBackgroundClip } from "@/lib/video/clip-orchestrator";
 import { getGitHubAccessToken } from "@/lib/auth";
+import { getUserApiKey } from "@/lib/credentials";
 import { getVideoClipProvider } from "@/lib/env";
+import { canUseProvider, isPremiumProvider, isPremiumUser } from "@/lib/membership";
 import { sendDailyDigestForDate } from "@/lib/digests";
 import { GitHubClient } from "@/lib/github/client";
 import { collectCandidates } from "@/lib/github/search";
@@ -482,13 +485,52 @@ export async function createVideoJob(
   const { buildVideoScript, serializeVideoScript } = await import("@/lib/video/script");
   const script = await buildVideoScript(format, input, repos);
 
+  const db = prisma as any;
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true, membershipTier: true, membershipExpiresAt: true }
+  });
+
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  const settings = await db.userSettings.findUnique({
+    where: { userId }
+  });
+
+  const videoProvider = settings?.videoProvider ?? "local_template";
+  const speechProvider = settings?.speechProvider ?? "piper";
+  const videoMode = settings?.videoMode ?? "local";
+
+  if (isPremiumProvider(videoProvider) || isPremiumProvider(speechProvider)) {
+    if (!canUseProvider(user.membershipTier, user.membershipExpiresAt, videoProvider)) {
+      throw new Error(
+        "MEMBERSHIP_REQUIRED: 视频/语音 API 需要 premium 会员。请先开通会员或切换到本地生成模式。"
+      );
+    }
+    if (!canUseProvider(user.membershipTier, user.membershipExpiresAt, speechProvider)) {
+      throw new Error(
+        "MEMBERSHIP_REQUIRED: 视频/语音 API 需要 premium 会员。请先开通会员或切换到本地模式。"
+      );
+    }
+  }
+
+  const generationMode: "local" | "premium" =
+    videoMode === "premium" || isPremiumProvider(videoProvider) || isPremiumProvider(speechProvider)
+      ? "premium"
+      : "local";
+
   return db.videoJob.create({
     data: {
       userId,
       queryRunId: runId,
       format,
       scriptJson: serializeVideoScript(script),
-      status: VideoJobStatus.pending
+      status: VideoJobStatus.pending,
+      generationMode,
+      videoProvider,
+      speechProvider
     }
   });
 }
@@ -507,7 +549,7 @@ export async function processVideoJob(jobId: string) {
     import("@/lib/video/ffmpeg")
   ]);
 
-  const job = await db.videoJob.findUnique({
+  const job = await (db as any).videoJob.findUnique({
     where: { id: jobId }
   });
 
@@ -536,7 +578,25 @@ export async function processVideoJob(jobId: string) {
   let fallbackWarning: string | null = null;
 
   try {
-    if (getVideoClipProvider() !== "none") {
+    if (job.videoProvider === "juhe_video" && job.generationMode === "premium") {
+      try {
+        logWorkflowStage("processVideoJob", "juhe_premium_background", { jobId });
+        const apiKey = await getUserApiKey(job.userId, "juhe_video");
+        if (apiKey) {
+          const { generatePremiumBackgroundClip } = await import("@/lib/video/clip-orchestrator");
+          const bgClip = await generatePremiumBackgroundClip(script, job.format as VideoFormat, apiKey);
+          if (bgClip && script.scenes.length > 0) {
+            script.scenes[0].clipPath = bgClip;
+          }
+        }
+      } catch (error) {
+        console.warn("[workflow][processVideoJob][juhe_premium_background_failed]", {
+          jobId,
+          error
+        });
+        fallbackWarning = `juhe_video_background_failed: ${error instanceof Error ? error.message : String(error)} | falling_back_to_template`;
+      }
+    } else if (getVideoClipProvider() !== "none") {
       try {
         logWorkflowStage("processVideoJob", "clip_generation", { jobId });
         const { generateSceneClips } = await import("@/lib/video/clip-orchestrator");
@@ -553,7 +613,7 @@ export async function processVideoJob(jobId: string) {
     }
 
     const audioPath = await (async () => {
-      const provider = createSpeechProvider();
+      const provider = createSpeechProvider(job.speechProvider ?? undefined);
 
       if (!provider) {
         fallbackWarning =
@@ -562,7 +622,7 @@ export async function processVideoJob(jobId: string) {
       }
 
       try {
-        logWorkflowStage("processVideoJob", "speech_synthesis", { jobId });
+        logWorkflowStage("processVideoJob", "speech_synthesis", { jobId, provider: job.speechProvider });
         const narration = script.narrationSegments
           .map((segment) => segment.text)
           .join("\n");

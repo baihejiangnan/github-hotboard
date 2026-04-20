@@ -1,28 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import styles from "@/app/queries/queries.module.css";
+import { VideoJobCard } from "@/components/video-job-card";
 import { DashboardPage } from "@/components/dashboard-page";
 import { authOptions } from "@/lib/auth";
-import { formatDateTime, getVideoFormatLabel, getVideoStatusLabel } from "@/lib/display";
 import { prisma } from "@/lib/prisma";
-
-function describeCaption(value: unknown) {
-  if (!value) {
-    return "尚未生成";
-  }
-
-  if (Array.isArray(value)) {
-    return `已生成 ${value.length} 条字幕`;
-  }
-
-  if (typeof value === "object") {
-    return "已生成字幕数据";
-  }
-
-  return "已生成字幕";
-}
 
 export default async function VideosPage() {
   const session = await getServerSession(authOptions);
@@ -68,47 +51,7 @@ export default async function VideosPage() {
         {jobs.length ? (
           <div className={styles.subscriptionList}>
             {jobs.map((job: any) => (
-              <article className={styles.subscriptionCard} key={job.id}>
-                <div className={styles.subscriptionTop}>
-                  <div className="stack">
-                    <div className={styles.subscriptionTitleRow}>
-                      <h3>{getVideoFormatLabel(job.format)}</h3>
-                      <span
-                        className={`${styles.statusPill} ${
-                          job.status === "failed" ? styles.statusFailed : styles.statusActive
-                        }`}
-                      >
-                        {getVideoStatusLabel(job.status)}
-                      </span>
-                    </div>
-                    <p className={styles.subscriptionMeta}>
-                      创建于 {formatDateTime(job.createdAt)} · 来源 Run {job.queryRunId}
-                    </p>
-                  </div>
-                  <div className={styles.subscriptionLinks}>
-                    <Link className="ghost-button" href={`/runs/${job.queryRunId}`}>
-                      查看来源
-                    </Link>
-                  </div>
-                </div>
-
-                <div className={styles.facts}>
-                  <div className={styles.fact}>
-                    <span>视频文件</span>
-                    <strong>{job.videoPath || "尚未生成"}</strong>
-                  </div>
-                  <div className={styles.fact}>
-                    <span>音频文件</span>
-                    <strong>{job.audioPath || "尚未生成"}</strong>
-                  </div>
-                  <div className={styles.fact}>
-                    <span>字幕状态</span>
-                    <strong>{describeCaption(job.captionJson)}</strong>
-                  </div>
-                </div>
-
-                {job.error ? <p className={styles.errorText}>失败原因：{job.error}</p> : null}
-              </article>
+              <VideoJobCard key={job.id} job={job} />
             ))}
           </div>
         ) : (

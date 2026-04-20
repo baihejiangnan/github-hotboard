@@ -48,7 +48,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Run not found." }, { status: 404 });
     }
 
-    const job = await createVideoJob(run.id, user.id, input.format);
+    let job;
+    try {
+      job = await createVideoJob(run.id, user.id, input.format);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.startsWith("MEMBERSHIP_REQUIRED:")) {
+        return NextResponse.json(
+          {
+            error: msg.replace("MEMBERSHIP_REQUIRED: ", ""),
+            membershipRequired: true
+          },
+          { status: 403 }
+        );
+      }
+      throw err;
+    }
+
     let responseJob = job;
 
     if (shouldInlineRender()) {

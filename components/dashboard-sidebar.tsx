@@ -1,9 +1,11 @@
+"use client";
+
 import Link from "next/link";
 
 import styles from "@/app/queries/queries.module.css";
 
 type DashboardSidebarProps = {
-  active: "explore" | "queries" | "share" | "videos";
+  active: "explore" | "queries" | "share" | "videos" | "settings";
   userName?: string | null;
 };
 
@@ -11,7 +13,8 @@ const navItems = [
   { key: "explore", href: "/explore", label: "Explore" },
   { key: "queries", href: "/queries", label: "My Queries" },
   { key: "share", href: "/share", label: "Share Studio" },
-  { key: "videos", href: "/videos", label: "Video Studio" }
+  { key: "videos", href: "/videos", label: "Video Studio" },
+  { key: "settings", href: "/settings", label: "Settings" }
 ] as const;
 
 export function DashboardSidebar({ active, userName }: DashboardSidebarProps) {
@@ -42,7 +45,10 @@ export function DashboardSidebar({ active, userName }: DashboardSidebarProps) {
       <div className={styles.userCard}>
         <strong>{userName || "已登录用户"}</strong>
         <p className={styles.muted}>GitHub 账号已连接，可运行个人榜单与自动化订阅。</p>
-        <Link className="ghost-button" href="/api/auth/signout">
+        <Link className="ghost-button" href="/api/auth/signout" onClick={(e) => {
+          e.preventDefault();
+          window.location.href = "/api/auth/signout?callbackUrl=/explore";
+        }}>
           Sign out
         </Link>
       </div>
